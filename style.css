@@ -1,104 +1,95 @@
 :root {
-    /* Palet Warna Utama */
+    /* ==== GLOBAL COLORS ==== */
     --color-cream: #fffbee;
     --color-dark: #231f20;
-    --color-orange: #f79039;
-    --color-yellow: #febd26;
-
-    /* Variabel Tema (Default Light) */
+    
+    /* ==== UI THEME COLORS (Panel, Text, Input) ==== */
     --bg-panel: rgba(255, 255, 255, 0.95);
     --text-main: var(--color-dark);
     --text-muted: #666;
     --border-color: #ddd;
     --input-bg: #f9f9f9;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+    /* ==== PETA COLORS (LIGHT MODE) ==== */
+    /* a. Fill Geometri SLS Tidak Terpilih (#231f20 - 50% opacity diatur via JS/RGBA) */
+    --map-sls-fill-nonsel: #231f20; 
     
-    /* Warna Garis */
-    --line-primary: var(--color-orange);
-    --line-secondary: #007bff; /* Biru untuk aksen garis putus-putus di Light Mode */
+    /* b & c. Batas SLS (#febd26) */
+    --map-sls-border: #febd26;
+
+    /* d, e, f. SubSLS Aksen (#FF8400) */
+    --map-subsls-accent: #FF8400;
+
+    /* g. Label Text (#231f20) */
+    --map-label-text: #231f20;
+
+    /* h. Label Buffer (#fffbee) */
+    --map-label-buffer: #fffbee;
 }
 
 [data-theme="dark"] {
+    /* ==== UI THEME COLORS OVERRIDE ==== */
     --bg-panel: rgba(35, 31, 32, 0.95); 
     --text-main: var(--color-cream);
     --text-muted: #aaa;
     --border-color: #444;
     --input-bg: #333;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    
-    --line-secondary: #00ffff; /* Cyan cerah untuk aksen garis putus-putus di Dark Mode */
+
+    /* ==== PETA COLORS (DARK MODE) ==== */
+    /* a. Fill Geometri SLS Tidak Terpilih (#fffbee) */
+    --map-sls-fill-nonsel: #fffbee;
+
+    /* b & c. Batas SLS (#f79039) */
+    --map-sls-border: #f79039;
+
+    /* d, e, f. SubSLS Aksen (#007bff) */
+    --map-subsls-accent: #007bff;
+
+    /* g. Label Text (#fffbee) */
+    --map-label-text: #fffbee;
+
+    /* h. Label Buffer (#231f20) */
+    --map-label-buffer: #231f20;
 }
 
+/* ==== RESET & LAYOUT ==== */
 body, html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
+    margin: 0; padding: 0; height: 100%;
     font-family: 'Roboto', sans-serif;
-    color: var(--text-main);
-    overflow: hidden; 
+    color: var(--text-main); overflow: hidden;
 }
 
-#map {
-    height: 100vh;
-    width: 100%;
-    z-index: 1;
-}
+#map { height: 100vh; width: 100%; z-index: 1; }
 
-/* Sidebar & UI Components (Sama seperti sebelumnya) */
+/* ==== SIDEBAR & UI ==== */
 .sidebar {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 320px;
-    background-color: var(--bg-panel);
-    backdrop-filter: blur(5px);
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: var(--shadow);
-    z-index: 1000;
-    max-height: calc(100vh - 60px);
-    overflow-y: auto;
+    position: absolute; top: 20px; left: 20px; width: 320px;
+    background-color: var(--bg-panel); backdrop-filter: blur(5px);
+    padding: 25px; border-radius: 16px; box-shadow: var(--shadow);
+    z-index: 1000; max-height: calc(100vh - 60px); overflow-y: auto;
     transition: all 0.3s ease;
 }
 
-.header-section {
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--color-orange);
-    padding-bottom: 10px;
-}
-
-h1 { margin: 0; font-size: 22px; font-weight: 700; color: var(--color-orange); }
+.header-section { margin-bottom: 20px; border-bottom: 2px solid var(--map-sls-border); padding-bottom: 10px; }
+h1 { margin: 0; font-size: 22px; font-weight: 700; color: var(--map-sls-border); }
 .subtitle { margin: 5px 0 0; font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
 .control-group { margin-bottom: 20px; }
-.group-header {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--text-muted); margin-bottom: 10px; font-weight: 700;
-}
-
+.group-header { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; }
 .input-wrapper { margin-bottom: 12px; }
-.input-wrapper label {
-    display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--text-main);
-}
+.input-wrapper label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--text-main); }
 
 select, input {
     width: 100%; padding: 10px 12px;
     background-color: var(--input-bg);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: var(--text-main);
-    font-family: inherit; font-size: 13px; /* Font size sedikit dikecilkan agar muat */
-    box-sizing: border-box;
-    transition: border 0.3s, box-shadow 0.3s;
+    border-radius: 8px; color: var(--text-main);
+    font-size: 13px; box-sizing: border-box;
 }
-
-select:focus, input:focus {
-    outline: none; border-color: var(--color-orange);
-    box-shadow: 0 0 0 3px rgba(247, 144, 57, 0.2);
-}
-
+select:focus, input:focus { outline: none; border-color: var(--map-sls-border); }
 select:disabled { opacity: 0.6; cursor: not-allowed; }
-
 .input-row { display: flex; gap: 10px; }
 
 button {
@@ -106,59 +97,51 @@ button {
     cursor: pointer; font-weight: 700; font-size: 14px; margin-top: 5px;
 }
 .btn-primary {
-    background: linear-gradient(45deg, var(--color-orange), var(--color-yellow));
-    color: #fff;
-    box-shadow: 0 4px 6px rgba(247, 144, 57, 0.3);
+    background: var(--map-sls-border); color: #fff; /* Sesuai warna tema */
 }
 .btn-secondary {
-    background-color: transparent; border: 1px solid var(--border-color);
-    color: var(--text-muted); padding: 8px; font-size: 12px;
+    background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 8px; font-size: 12px;
 }
-.btn-secondary:hover { background-color: var(--input-bg); color: var(--text-main); }
-
-.footer {
-    margin-top: 30px; text-align: center; font-size: 10px;
-    color: var(--text-muted); border-top: 1px solid var(--border-color);
-    padding-top: 15px; line-height: 1.5;
-}
-
-#info-box {
-    text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 10px; font-weight: 500;
-}
+.btn-secondary:hover { background: var(--input-bg); color: var(--text-main); }
 
 .floating-btn {
     position: absolute; top: 20px; right: 20px; width: 45px; height: 45px;
     background-color: var(--bg-panel); color: var(--text-main);
-    border-radius: 50%; box-shadow: var(--shadow);
-    z-index: 1000; display: flex; align-items: center; justify-content: center;
-    font-size: 20px; padding: 0; margin: 0; cursor: pointer; border: none;
+    border-radius: 50%; box-shadow: var(--shadow); z-index: 1000;
+    font-size: 20px; cursor: pointer; border: none;
+}
+.footer {
+    margin-top: 30px; text-align: center; font-size: 10px; color: var(--text-muted);
+    border-top: 1px solid var(--border-color); padding-top: 15px;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+/* ==== LABEL SUBSLS DINAMIS ==== */
+.subsls-label {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-weight: 800; /* Extra Bold agar jelas */
+    text-align: center;
+    white-space: nowrap;
+    
+    /* 1. Warna Teks dari Variabel */
+    color: var(--map-label-text);
 
-/* Popup */
+    /* 2. Buffer (Outline/Stroke) menggunakan text-shadow 
+       Buffer: #231f20 (dark mode) / #fffbee (light mode) */
+    text-shadow: 
+        -1.5px -1.5px 0 var(--map-label-buffer),
+         1.5px -1.5px 0 var(--map-label-buffer),
+        -1.5px  1.5px 0 var(--map-label-buffer),
+         1.5px  1.5px 0 var(--map-label-buffer);
+    
+    /* 3. Ukuran Font Dinamis dikontrol oleh Variabel CSS yang diupdate via JS */
+    font-size: var(--dynamic-font-size, 12px);
+    transition: font-size 0.2s ease, color 0.3s ease, text-shadow 0.3s ease;
+}
+
+/* Popup Style */
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     background: var(--bg-panel); color: var(--text-main); border-radius: 8px;
 }
-.leaflet-popup-content b { color: var(--color-orange); }
-
-/* ==== STYLE KHUSUS SUBSLS ==== */
-
-/* Label SubSLS di tengah geometri */
-.subsls-label {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    color: var(--text-main);
-    font-weight: bold;
-    font-size: 10px;
-    opacity: 0.5 !important; /* Opacity 50% sesuai request */
-    text-shadow: 1px 1px 2px rgba(255,255,255,0.8); /* Agar terbaca di peta satelit */
-}
-[data-theme="dark"] .subsls-label {
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    color: #fff;
-}
+.leaflet-popup-content b { color: var(--map-sls-border); }
