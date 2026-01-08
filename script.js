@@ -17,13 +17,13 @@ const selectDesa = document.getElementById('filter-desa');
 const selectSls = document.getElementById('filter-sls');
 const countDisplay = document.getElementById('count-display');
 
-// Style Default (Saat belum ada yang dipilih)
+// Style Default
 const defaultStyle = {
-    color: "#ff7800", // Warna garis oranye
-    weight: 2,        // Tebal garis normal
+    color: "#ff7800", 
+    weight: 2,        
     opacity: 1,
-    fillOpacity: 0.1, // Transparansi isi (agar satelit terlihat dikit)
-    fillColor: null   // Ikuti default atau kosong
+    fillOpacity: 0.1, 
+    fillColor: null   
 };
 
 // 3. Load GeoJSON
@@ -45,7 +45,6 @@ function renderMap(data) {
     geoJsonLayer = L.geoJSON(data, {
         style: defaultStyle,
         onEachFeature: function(feature, layer) {
-            // Popup info
             const props = feature.properties;
             const popupContent = `
                 <b>Kecamatan:</b> ${props.nmkec}<br>
@@ -55,26 +54,16 @@ function renderMap(data) {
             `;
             layer.bindPopup(popupContent);
 
-            // Event Klik pada Wilayah
             layer.on('click', function(e) {
-                // 1. Update Dropdown SLS agar sesuai dengan yg diklik
-                // Pastikan dropdown Desa/Kecamatan sudah sesuai konteks (ini otomatis jika filter aktif)
-                // Jika user klik bebas tanpa filter, kita set dropdown value jika ada opsinya
-                
                 if (!selectSls.disabled) {
                     selectSls.value = props.nmsls;
                 }
-                
-                // 2. Jalankan Logika Highlight & Zoom
                 highlightAndZoom(layer);
-                
-                // Hentikan peta dari zoom double-click jika ada
                 L.DomEvent.stopPropagation(e);
             });
         }
     }).addTo(map);
 
-    // Zoom fit ke seluruh data yang ada
     if (geoJsonLayer.getLayers().length > 0) {
         map.fitBounds(geoJsonLayer.getBounds());
     }
@@ -82,48 +71,42 @@ function renderMap(data) {
     countDisplay.innerText = data.features.length;
 }
 
-// 5. Fungsi Logika Highlight & Zoom (Inti Permintaan Anda)
+// 5. Highlight & Zoom
 function highlightAndZoom(targetLayer) {
-    // A. Animasi Zoom (Fly To)
     map.flyToBounds(targetLayer.getBounds(), {
         padding: [50, 50],
-        duration: 1.5 // Durasi animasi dalam detik
+        duration: 1.5
     });
 
-    // B. Styling (Loop semua layer yang sedang tampil)
     geoJsonLayer.eachLayer(function(layer) {
         if (layer === targetLayer) {
-            // === SLS TERPILIH ===
             layer.setStyle({
-                weight: 4,           // Garis dipertebal
-                color: '#ff7800',    // Tetap oranye (atau warna lain jika mau)
-                fillOpacity: 0       // Tidak ada fill (transparan total)
+                weight: 4,           
+                color: '#ff7800',    
+                fillOpacity: 0       
             });
-            layer.bringToFront();    // Pastikan garisnya di atas layer lain
-            layer.openPopup();       // Buka popup info
+            layer.bringToFront();    
+            layer.openPopup();       
         } else {
-            // === SLS TIDAK TERPILIH ===
             layer.setStyle({
-                weight: 1,           // Garis tipis
+                weight: 1,           
                 color: '#ff7800',
-                fillColor: 'gray',   // Isi warna abu-abu
-                fillOpacity: 0.25    // Opacity 25%
+                fillColor: 'gray',   
+                fillOpacity: 0.25    
             });
         }
     });
 }
 
-// Fungsi Reset Style (Kembali ke awal)
+// Reset Style
 function resetLayerStyles() {
     geoJsonLayer.eachLayer(function(layer) {
-        geoJsonLayer.resetStyle(layer); // Kembali ke defaultStyle
+        geoJsonLayer.resetStyle(layer); 
     });
-    // Kembalikan view ke seluruh wilayah
     map.fitBounds(geoJsonLayer.getBounds());
 }
 
-
-// 6. Logika Filter
+// 6. Logika Filter Dropdown
 function populateFilters(data) {
     const features = data.features;
     const kecamatans = new Set();
@@ -137,22 +120,15 @@ function populateFilters(data) {
     });
 }
 
-// Event Listener: Kecamatan
 selectKecamatan.addEventListener('change', function() {
     const selectedKec = this.value;
-    
-    // Reset bawahannya
     selectDesa.innerHTML = '<option value="">Semua Desa</option>';
     selectSls.innerHTML = '<option value="">Semua SLS</option>';
     selectDesa.disabled = !selectedKec;
     selectSls.disabled = true;
 
-    if (!selectedKec) {
-        applyFilterData(); 
-        return;
-    }
+    if (!selectedKec) { applyFilterData(); return; }
 
-    // Isi Dropdown Desa
     const filteredFeatures = geoJsonData.features.filter(f => f.properties.nmkec === selectedKec);
     const desas = new Set(filteredFeatures.map(f => f.properties.nmdesa));
     Array.from(desas).sort().forEach(desa => {
@@ -161,23 +137,16 @@ selectKecamatan.addEventListener('change', function() {
         option.textContent = desa;
         selectDesa.appendChild(option);
     });
-
     applyFilterData();
 });
 
-// Event Listener: Desa
 selectDesa.addEventListener('change', function() {
     const selectedDesa = this.value;
-    
     selectSls.innerHTML = '<option value="">Semua SLS</option>';
     selectSls.disabled = !selectedDesa;
 
-    if (!selectedDesa) {
-        applyFilterData();
-        return;
-    }
+    if (!selectedDesa) { applyFilterData(); return; }
 
-    // Isi Dropdown SLS
     const currentKec = selectKecamatan.value;
     const filteredFeatures = geoJsonData.features.filter(f => 
         f.properties.nmkec === currentKec && 
@@ -190,74 +159,156 @@ selectDesa.addEventListener('change', function() {
         option.textContent = sls;
         selectSls.appendChild(option);
     });
-
     applyFilterData();
 });
 
-// Event Listener: SLS (Saat user memilih SLS dari dropdown)
 selectSls.addEventListener('change', function() {
     const selectedSlsName = this.value;
-
     if (!selectedSlsName) {
-        // Jika pilih "Semua SLS", reset style dan zoom out
         resetLayerStyles();
     } else {
-        // Cari layer yang sesuai dengan nama SLS yang dipilih
         let foundLayer = null;
         geoJsonLayer.eachLayer(layer => {
             if (layer.feature.properties.nmsls === selectedSlsName) {
                 foundLayer = layer;
             }
         });
-
-        if (foundLayer) {
-            highlightAndZoom(foundLayer);
-        }
+        if (foundLayer) highlightAndZoom(foundLayer);
     }
 });
 
-// Fungsi Utama Filter Data (Hanya Filter Wilayah Besar: Kec/Desa)
-// CATATAN: Kita TIDAK memfilter SLS di sini agar "Sisa SLS" tetap terlihat (untuk didimkan)
 function applyFilterData() {
     const kecVal = selectKecamatan.value;
     const desaVal = selectDesa.value;
-
-    // Filter GeoJSON hanya sampai level DESA
-    // Agar saat memilih SLS, teman-teman satu desanya masih ada (untuk jadi background abu-abu)
     const filteredFeatures = geoJsonData.features.filter(f => {
         const p = f.properties;
         return (!kecVal || p.nmkec === kecVal) &&
                (!desaVal || p.nmdesa === desaVal);
     });
-
-    const filteredData = {
-        type: "FeatureCollection",
-        features: filteredFeatures
-    };
-
-    renderMap(filteredData);
+    renderMap({ type: "FeatureCollection", features: filteredFeatures });
 }
 
-// Reset Button
 document.getElementById('btn-reset').addEventListener('click', () => {
     selectKecamatan.value = "";
     selectDesa.innerHTML = '<option value="">Semua Desa</option>';
     selectSls.innerHTML = '<option value="">Semua SLS</option>';
     selectDesa.disabled = true;
     selectSls.disabled = true;
-    
-    // Render ulang semua data
     renderMap(geoJsonData);
 });
 
-// Search Lat Long (Sama seperti sebelumnya)
+// ============================================================
+// FITUR PENCARIAN BARU (POINT IN POLYGON)
+// ============================================================
+
 document.getElementById('btn-search').addEventListener('click', () => {
     const lat = parseFloat(document.getElementById('input-lat').value);
     const lng = parseFloat(document.getElementById('input-lng').value);
 
-    if (isNaN(lat) || isNaN(lng)) return;
+    if (isNaN(lat) || isNaN(lng)) {
+        alert("Masukkan koordinat yang valid");
+        return;
+    }
 
+    // 1. Cari apakah titik ini masuk ke dalam salah satu SLS di database
+    // Kita cari di RAW data (geoJsonData) agar tidak terpengaruh filter yang sedang aktif
+    let foundFeature = findSlsByLocation(lat, lng, geoJsonData);
+    
+    let popupContent = "";
+    let popupOptions = {};
+
+    if (foundFeature) {
+        // SKENARIO 1: Lokasi DITEMUKAN (Warna Biru)
+        const p = foundFeature.properties;
+        popupContent = `
+            <div style="color: #0056b3; font-family: sans-serif; text-align: center;">
+                <h4 style="margin: 0 0 5px 0; border-bottom: 1px solid #ccc; padding-bottom:5px;">Lokasi Terdeteksi</h4>
+                Titik Lokasi berada di:<br>
+                <b>Desa ${p.nmdesa}</b><br>
+                <b>${p.nmsls}</b>
+            </div>
+        `;
+        // Opsi tambahan jika ingin bubble popupnya berwarna khusus, 
+        // tapi styling konten HTML di atas sudah cukup mewakili permintaan.
+    } else {
+        // SKENARIO 2: Lokasi TIDAK DITEMUKAN (Warna Merah)
+        popupContent = `
+            <div style="color: #dc3545; font-family: sans-serif; text-align: center; font-weight: bold;">
+                <h4 style="margin: 0 0 5px 0; border-bottom: 1px solid #ccc; padding-bottom:5px;">Peringatan</h4>
+                Titik Lokasi berada di luar peta Wilkerstat
+            </div>
+        `;
+    }
+
+    // Hapus marker lama
     if (searchMarker) map.removeLayer(searchMarker);
-    searchMarker = L.marker([lat, lng]).addTo(map).bindPopup(`Lokasi: ${lat}, ${lng}`).openPopup();
-    map.flyTo([lat, lng], 18);
+
+    // Tambah marker baru & Buka Popup
+    searchMarker = L.marker([lat, lng]).addTo(map)
+        .bindPopup(popupContent)
+        .openPopup();
+
+    // Zoom ke lokasi
+    map.setView([lat, lng], 18);
+    
+    // Opsional: Jika ketemu, bisa otomatis highlight SLS-nya juga
+    if (foundFeature) {
+        // Cari layer Leaflet yang sesuai dengan feature ini untuk di-highlight
+        // (Hanya jika layer tersebut sedang dirender/tidak terfilter)
+        geoJsonLayer.eachLayer(layer => {
+            if (layer.feature.properties.idsls === foundFeature.properties.idsls) {
+                highlightAndZoom(layer);
+            }
+        });
+    }
 });
+
+/**
+ * Fungsi Algoritma Point in Polygon (Ray Casting)
+ * Mencari feature mana yang menampung titik (lat, lng)
+ */
+function findSlsByLocation(lat, lng, data) {
+    if (!data) return null;
+    const point = [lng, lat]; // GeoJSON formatnya [lng, lat]
+
+    for (const feature of data.features) {
+        const geom = feature.geometry;
+        if (!geom) continue;
+
+        if (geom.type === 'Polygon') {
+            // Polygon: koordinat ada di geom.coordinates
+            if (isPointInPolygon(point, geom.coordinates)) return feature;
+        } 
+        else if (geom.type === 'MultiPolygon') {
+            // MultiPolygon: array dari Polygon
+            for (const polyCoords of geom.coordinates) {
+                if (isPointInPolygon(point, polyCoords)) return feature;
+            }
+        }
+    }
+    return null; // Tidak ketemu
+}
+
+/**
+ * Fungsi Matematika Dasar Cek Titik dalam Polygon
+ * Menggunakan Ray-Casting Algorithm
+ */
+function isPointInPolygon(point, vs) {
+    // vs adalah array ring polygon. Ring pertama [0] adalah batas luar (exterior)
+    // Ring selanjutnya adalah lubang (holes), tapi untuk kasus ini kita cek batas luar saja cukup.
+    
+    const x = point[0], y = point[1];
+    const ring = vs[0]; 
+    
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const xi = ring[i][0], yi = ring[i][1];
+        const xj = ring[j][0], yj = ring[j][1];
+        
+        const intersect = ((yi > y) !== (yj > y)) &&
+            (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
