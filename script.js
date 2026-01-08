@@ -440,3 +440,34 @@ function isPtInPoly(pt, vs) {
     }
     return inside;
 }
+
+// ==========================================
+// 7. RESPONSIVE UI LOGIC (Hamburger Menu)
+// ==========================================
+const sidebar = document.getElementById('sidebar');
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const closeSidebarBtn = document.getElementById('close-sidebar');
+const overlay = document.getElementById('sidebar-overlay');
+
+// Fungsi Buka Sidebar
+function openSidebar() {
+    sidebar.classList.add('active');
+    overlay.classList.add('active');
+}
+
+// Fungsi Tutup Sidebar
+function closeSidebar() {
+    sidebar.classList.remove('active');
+    overlay.classList.remove('active');
+}
+
+// Event Listeners
+mobileMenuBtn.addEventListener('click', openSidebar);
+closeSidebarBtn.addEventListener('click', closeSidebar);
+overlay.addEventListener('click', closeSidebar); // Klik area gelap untuk tutup
+
+// Opsional: Tutup sidebar otomatis setelah hasil pencarian ditemukan (di Mobile)
+// Tambahkan baris ini di dalam logika search Anda jika diinginkan:
+if (window.innerWidth <= 768) {
+       closeSidebar();
+   }
