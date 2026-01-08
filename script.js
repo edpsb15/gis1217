@@ -1,27 +1,5 @@
 // ==========================================
-// 1. Logic Theme Toggle
-// ==========================================
-const toggleBtn = document.getElementById('theme-toggle');
-const htmlEl = document.documentElement;
-
-// Fungsi helper untuk mengambil variabel CSS
-function getCssVar(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-toggleBtn.addEventListener('click', () => {
-    const currentTheme = htmlEl.getAttribute('data-theme');
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    htmlEl.setAttribute('data-theme', newTheme);
-    toggleBtn.innerHTML = newTheme === 'light' ? '🌙' : '☀️';
-    
-    // Refresh map style jika ada layer terpilih agar warna garis berubah
-    if(geoJsonLayer) geoJsonLayer.eachLayer(layer => geoJsonLayer.resetStyle(layer));
-    // Trigger ulang highlight jika ada yang aktif (bisa ditambahkan logic simpan state)
-});
-
-// ==========================================
-// 2. Inisialisasi Peta
+// 1. Inisialisasi & Helper Warna
 // ==========================================
 var map = L.map('map', { zoomControl: false }).setView([2.6, 98.7], 11);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -30,30 +8,89 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/
     attribution: 'Tiles &copy; Esri'
 }).addTo(map);
 
-// Variabel Global
+// Global State
 var geoJsonData = null;
 var geoJsonLayer = null;
 var searchMarker = null;
 
-// DOM Elements
-const selectKecamatan = document.getElementById('filter-kecamatan');
-const selectDesa = document.getElementById('filter-desa');
-const selectSls = document.getElementById('filter-sls');
-const selectSubSls = document.getElementById('filter-subsls'); // Filter Baru
-const countDisplay = document.getElementById('count-display');
+// Mengambil nilai warna aktual dari CSS Variable
+function getThemeColor(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
 
-// Style Default
-const defaultStyle = {
-    color: "#f79039", // var(--line-primary) manual fallback
-    weight: 1.5,
-    opacity: 0.9,
-    fillOpacity: 0.1,
-    fillColor: null,
-    dashArray: null // Garis solid
+// Objek untuk menyimpan warna saat ini (akan diupdate saat toggle tema)
+let currentColors = {
+    slsFillNonSel: getThemeColor('--map-sls-fill-nonsel'),
+    slsBorder: getThemeColor('--map-sls-border'),
+    subSlsAccent: getThemeColor('--map-subsls-accent')
 };
 
+function updateColorState() {
+    currentColors = {
+        slsFillNonSel: getThemeColor('--map-sls-fill-nonsel'),
+        slsBorder: getThemeColor('--map-sls-border'),
+        subSlsAccent: getThemeColor('--map-subsls-accent')
+    };
+}
+
 // ==========================================
-// 3. Load & Process Data
+// 2. Logic Theme Toggle & Dynamic Font
+// ==========================================
+const toggleBtn = document.getElementById('theme-toggle');
+const htmlEl = document.documentElement;
+
+toggleBtn.addEventListener('click', () => {
+    const currentTheme = htmlEl.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    htmlEl.setAttribute('data-theme', newTheme);
+    toggleBtn.innerHTML = newTheme === 'light' ? '🌙' : '☀️';
+
+    // 1. Update State Warna JS
+    updateColorState();
+    
+    // 2. Render Ulang Style Layer yang ada
+    if (geoJsonLayer) {
+        // Kita perlu menerapkan ulang highlight logic jika ada yang sedang terpilih
+        // Namun cara termudah adalah reset ke default lalu user pilih ulang, 
+        // atau kita loop resetStyle tapi tetap mempertahankan seleksi. 
+        // Untuk kestabilan, kita kembalikan ke default style view dulu.
+        resetLayerStyles();
+    }
+});
+
+// === LOGIC FONT DINAMIS ===
+// Mengupdate variabel CSS --dynamic-font-size berdasarkan level zoom
+function updateLabelFontSize() {
+    const zoom = map.getZoom();
+    // Batasan Zoom Peta umumnya 11 (jauh) s.d 18 (dekat)
+    // Kita ingin font size:
+    // Min: 10px (saat zoom out)
+    // Max: 24px (saat zoom in maksimal)
+    
+    const minFont = 10;
+    const maxFont = 24;
+    const minZoom = 11;
+    const maxZoom = 18;
+
+    // Rumus interpolasi linear
+    let newSize = minFont + (zoom - minZoom) * (maxFont - minFont) / (maxZoom - minZoom);
+
+    // Clamp values (jaga agar tidak melampaui batas)
+    if (newSize < minFont) newSize = minFont;
+    if (newSize > maxFont) newSize = maxFont;
+
+    // Set Variable CSS pada root document
+    document.documentElement.style.setProperty('--dynamic-font-size', `${newSize}px`);
+}
+
+// Pasang Listener Zoom
+map.on('zoomend', updateLabelFontSize);
+// Panggil sekali di awal
+updateLabelFontSize();
+
+
+// ==========================================
+// 3. Load Data & Render
 // ==========================================
 fetch('peta_sls_2025.geojson')
     .then(response => response.json())
@@ -64,24 +101,22 @@ fetch('peta_sls_2025.geojson')
     })
     .catch(error => console.error('Error loading GeoJSON:', error));
 
-// ==========================================
-// 4. Render Map & Basic Interaction
-// ==========================================
+
 function renderMap(data) {
-    if (geoJsonLayer) {
-        map.removeLayer(geoJsonLayer);
-    }
+    // Pastikan warna terupdate sebelum render
+    updateColorState();
+
+    if (geoJsonLayer) map.removeLayer(geoJsonLayer);
 
     geoJsonLayer = L.geoJSON(data, {
-        style: defaultStyle,
+        style: getDefaultStyle, // Menggunakan fungsi agar dinamis
         onEachFeature: function(feature, layer) {
             const props = feature.properties;
-            
-            // Format Popup
             const subInfo = props.subsls ? `<b>Sub SLS:</b> ${props.subsls}<br>` : '';
+            
             const popupContent = `
                 <div style="font-family: 'Roboto', sans-serif;">
-                    <h4 style="margin:0 0 5px; color:#f79039; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Wilayah</h4>
+                    <h4 style="margin:0 0 5px; color:${currentColors.slsBorder}; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Wilayah</h4>
                     <b>Kecamatan:</b> [${props.kdkec}] ${props.nmkec}<br>
                     <b>Desa:</b> [${props.kddesa}] ${props.nmdesa}<br>
                     <b>SLS:</b> [${props.kdsls}] ${props.nmsls}<br>
@@ -91,10 +126,8 @@ function renderMap(data) {
             `;
             layer.bindPopup(popupContent);
 
-            // Interaksi Klik
             layer.on('click', function(e) {
-                // Saat klik peta, kita perlu tahu apakah ini bagian dari SLS yg punya sub atau tidak
-                // Untuk simplifikasi, kita trigger logika highlight
+                // Saat klik, trigger highlight spesifik
                 highlightSubSlsSpecific(layer);
                 L.DomEvent.stopPropagation(e);
             });
@@ -104,29 +137,48 @@ function renderMap(data) {
     if (geoJsonLayer.getLayers().length > 0) {
         map.fitBounds(geoJsonLayer.getBounds());
     }
-    countDisplay.innerText = data.features.length;
+    document.getElementById('count-display').innerText = data.features.length;
 }
 
+// Fungsi Style Default (Mengacu pada Point 2.a & 2.b)
+function getDefaultStyle() {
+    return {
+        // b. Batas SLS Tidak Terpilih
+        color: currentColors.slsBorder, 
+        weight: 1.5,
+        opacity: 1,
+        
+        // a. Fill Geometri SLS Tidak Terpilih (Opacity 50%)
+        fillColor: currentColors.slsFillNonSel,
+        fillOpacity: 0.5,
+        
+        dashArray: null
+    };
+}
+
+
 // ==========================================
-// 5. Advanced Highlighting Logic
+// 4. Highlight Logic (Updated Colors)
 // ==========================================
 
-// Fungsi RESET Style ke Awal
 function resetLayerStyles() {
+    // Refresh warna variable jaga-jaga user ganti tema saat ada seleksi
+    updateColorState();
+    
     geoJsonLayer.eachLayer(layer => {
-        geoJsonLayer.resetStyle(layer);
-        layer.unbindTooltip(); // Hapus label jika ada
+        geoJsonLayer.resetStyle(layer); // Kembali ke getDefaultStyle
+        layer.unbindTooltip(); 
     });
     map.fitBounds(geoJsonLayer.getBounds());
 }
 
-// A. Highlight SLS (GROUP) - Saat SLS dipilih dari dropdown
+// A. Highlight SLS GROUP (Induk)
 function highlightSlsGroup(slsCode, slsName) {
-    // 1. Cari semua feature yang termasuk dalam SLS ini
+    updateColorState();
+
     const relatedLayers = [];
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
-        // Cocokkan berdasarkan nmsls dan kdsls (untuk presisi)
         if (p.kdsls === slsCode && p.nmsls === slsName) {
             relatedLayers.push(layer);
         }
@@ -134,59 +186,62 @@ function highlightSlsGroup(slsCode, slsName) {
 
     if (relatedLayers.length === 0) return;
 
-    // 2. Hitung Bounds gabungan
     const groupFeatureGroup = L.featureGroup(relatedLayers);
     map.flyToBounds(groupFeatureGroup.getBounds(), { padding: [50, 50], duration: 1.2 });
 
-    // 3. Styling
-    const secondaryColor = getCssVar('--line-secondary') || '#007bff';
-    const primaryColor = getCssVar('--line-primary') || '#f79039';
+    const hasMultipleSubs = relatedLayers.length > 1;
 
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
         const isTarget = (p.kdsls === slsCode && p.nmsls === slsName);
 
         if (isTarget) {
-            // Jika dia punya Sub SLS (artinya ada > 1 feature atau punya kode sub)
-            // Cek apakah group ini memiliki multiple sub geometries
-            const hasMultipleSubs = relatedLayers.length > 1;
-
             if (hasMultipleSubs) {
-                // c. Geometry ditampilkan semua (sudah via flyToBounds)
-                // b. Garis batas subsls putus-putus
+                // === SLS PUNYA SUB ===
+                // e. Batas SUBSLS Tidak Terpilih (tapi dalam group SLS terpilih)
                 layer.setStyle({
                     weight: 2,
-                    color: secondaryColor, // Warna sekunder (beda light/dark)
-                    dashArray: '5, 5',     // Garis putus-putus
-                    fillOpacity: 0.1,
-                    fillColor: secondaryColor
+                    color: currentColors.subSlsAccent, // SubSLS Border Color
+                    dashArray: '5, 5', // Dashed
+                    
+                    // f. Fill SubSLS Sibling/Tidak Terpilih (Opacity 25%)
+                    fillColor: currentColors.subSlsAccent,
+                    fillOpacity: 0.25
                 });
 
-                // a. Munculkan Label (kdsubsls) di tengah opacity 50%
+                // Tampilkan Label SubSLS
                 if (p.subsls) {
                     layer.bindTooltip(p.subsls, {
                         permanent: true,
                         direction: 'center',
-                        className: 'subsls-label' // style di CSS
+                        className: 'subsls-label' // Style CSS (Buffer & Font Size)
                     }).openTooltip();
                 }
+
             } else {
-                // Jika SLS Tunggal (tidak punya sub)
+                // === SLS TUNGGAL (Tidak punya sub) ===
+                // c. Batas SLS Terpilih (Tambah ketebalan)
                 layer.setStyle({
-                    weight: 4,
-                    color: '#febd26',
-                    dashArray: null, // Solid
-                    fillOpacity: 0
+                    weight: 4, // Lebih tebal
+                    color: currentColors.slsBorder,
+                    dashArray: null,
+                    fillOpacity: 0 // Bolong
                 });
                 layer.bringToFront();
             }
         } else {
-            // Non-Target -> Dimmed
+            // === WILAYAH LAIN (BACKGROUND) ===
+            // Kembali ke style default (a & b) tapi mungkin didimkan sedikit jika mau fokus
+            // Untuk mematuhi request "Batas SLS Tidak Terpilih", kita pakai resetStyle saja untuk non-target
+            // Tapi agar fokus, biasanya yang lain dibuat redup. 
+            // Sesuai request: "Fill geometri sls tidak terpilih ... opacity 50%" (sudah default)
+            
+            // Kita biarkan default style (via resetStyle nanti) atau set manual:
             layer.setStyle({
                 weight: 1,
-                color: primaryColor,
-                fillColor: '#231f20',
-                fillOpacity: 0.4,
+                color: currentColors.slsBorder,
+                fillColor: currentColors.slsFillNonSel,
+                fillOpacity: 0.5,
                 dashArray: null
             });
             layer.unbindTooltip();
@@ -194,306 +249,192 @@ function highlightSlsGroup(slsCode, slsName) {
     });
 }
 
-// B. Highlight SubSLS Specific - Saat SubSLS dipilih atau diklik
+// B. Highlight SubSLS Specific (Saat diklik atau dipilih dari Sub Filter)
 function highlightSubSlsSpecific(targetLayer) {
+    updateColorState();
     const props = targetLayer.feature.properties;
     
-    // Zoom ke feature spesifik
     map.flyToBounds(targetLayer.getBounds(), { padding: [50, 50], duration: 1 });
-
-    const secondaryColor = getCssVar('--line-secondary') || '#007bff';
     
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
-        // Cek apakah layer ini saudara (satu SLS induk yang sama)
         const isSibling = (p.kdsls === props.kdsls && p.nmsls === props.nmsls);
         
         if (layer === targetLayer) {
-            // 4.b. SubSLS Terpilih: NoFill, Dashed Line
+            // === d. Batas SUBSLS Terpilih ===
             layer.setStyle({
-                weight: 4,
-                color: secondaryColor,
-                dashArray: '10, 5', // Putus-putus lebih tebal
-                fillOpacity: 0      // No Fill
+                weight: 4, // Tambah ketebalan
+                color: currentColors.subSlsAccent,
+                dashArray: '10, 5', // Dashed Line (lebih jelas)
+                fillOpacity: 0 // No Fill
             });
             layer.bringToFront();
-            layer.openPopup(); // 4.a Munculkan info
+            layer.openPopup(); 
+            
+            // Label tetap muncul di yang dipilih
+            if (p.subsls) {
+                layer.bindTooltip(p.subsls, {
+                    permanent: true, direction: 'center', className: 'subsls-label'
+                }).openTooltip();
+            }
+
         } else if (isSibling) {
-            // 4.b. Tetangga satu SLS: Abu-abu opacity 20%, Dashed Line
+            // === e & f. SubSLS Tetangga (Satu SLS Induk) ===
             layer.setStyle({
                 weight: 2,
-                color: secondaryColor,
+                color: currentColors.subSlsAccent, // Dashed Color
                 dashArray: '5, 5',
-                fillColor: 'gray',
-                fillOpacity: 0.2
+                fillColor: currentColors.subSlsAccent, // Fill Color Sama
+                fillOpacity: 0.25 // Opacity 25%
             });
+            
+            // Label juga muncul di tetangga agar terlihat konteksnya
+            if (p.subsls) {
+                layer.bindTooltip(p.subsls, {
+                    permanent: true, direction: 'center', className: 'subsls-label'
+                }).openTooltip();
+            }
+
         } else {
-            // Wilayah lain: Gelap
-            layer.setStyle({
-                weight: 1,
-                color: '#f79039',
-                fillColor: '#231f20',
-                fillOpacity: 0.5,
-                dashArray: null
-            });
+            // Wilayah Lain -> Default Style
+            layer.setStyle(getDefaultStyle());
+            layer.unbindTooltip();
         }
     });
 }
 
-
 // ==========================================
-// 6. Filter Logic (Dropdowns)
+// 5. DOM Elements & Filters (Tidak Berubah Banyak)
 // ==========================================
+const selectKecamatan = document.getElementById('filter-kecamatan');
+const selectDesa = document.getElementById('filter-desa');
+const selectSls = document.getElementById('filter-sls');
+const selectSubSls = document.getElementById('filter-subsls');
 
-// Helper: Sort Array of Objects by specific key code
 function sortAndUnique(features, codeKey, nameKey) {
     const mapObj = new Map();
     features.forEach(f => {
         const code = f.properties[codeKey];
         const name = f.properties[nameKey];
-        if (code && !mapObj.has(code)) {
-            mapObj.set(code, { code, name });
-        }
+        if (code && !mapObj.has(code)) mapObj.set(code, { code, name });
     });
-    // Convert to array and Sort Ascending by Code
     return Array.from(mapObj.values()).sort((a, b) => a.code.toString().localeCompare(b.code.toString()));
 }
 
-// 6.1 Populate Kecamatan
 function populateFiltersKecamatan(data) {
     const sortedKec = sortAndUnique(data.features, 'kdkec', 'nmkec');
     selectKecamatan.innerHTML = '<option value="">Semua Kecamatan</option>';
-    
     sortedKec.forEach(item => {
         const option = document.createElement('option');
-        option.value = item.code; // Simpan Kode sebagai value
-        // Format: [080] - PANGURURAN
+        option.value = item.code;
         option.textContent = `[${item.code}] - ${item.name}`; 
         selectKecamatan.appendChild(option);
     });
 }
 
-// Event Kecamatan
 selectKecamatan.addEventListener('change', function() {
-    const kdkec = this.value; // Ambil Kode
-    
-    // Reset Child Filters
-    resetDropdown(selectDesa, 'Desa');
-    resetDropdown(selectSls, 'SLS');
-    resetDropdown(selectSubSls, 'Sub SLS');
-
-    if (!kdkec) {
-        applyMainFilter(); 
-        return;
-    }
-
-    // Filter features untuk dropdown Desa
-    const filteredFeatures = geoJsonData.features.filter(f => f.properties.kdkec === kdkec);
-    const sortedDesa = sortAndUnique(filteredFeatures, 'kddesa', 'nmdesa');
-    
-    sortedDesa.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.code;
-        option.textContent = `[${item.code}] - ${item.name}`;
-        selectDesa.appendChild(option);
+    const kdkec = this.value;
+    resetDropdown(selectDesa, 'Desa'); resetDropdown(selectSls, 'SLS'); resetDropdown(selectSubSls, 'Sub SLS');
+    if (!kdkec) { applyMainFilter(); return; }
+    const filtered = geoJsonData.features.filter(f => f.properties.kdkec === kdkec);
+    const sorted = sortAndUnique(filtered, 'kddesa', 'nmdesa');
+    sorted.forEach(item => {
+        const opt = document.createElement('option'); opt.value = item.code; opt.textContent = `[${item.code}] - ${item.name}`; selectDesa.appendChild(opt);
     });
     selectDesa.disabled = false;
-    
     applyMainFilter();
 });
 
-// Event Desa
 selectDesa.addEventListener('change', function() {
-    const kddesa = this.value;
-    const kdkec = selectKecamatan.value;
-
-    resetDropdown(selectSls, 'SLS');
-    resetDropdown(selectSubSls, 'Sub SLS');
-
-    if (!kddesa) {
-        applyMainFilter();
-        return;
-    }
-
-    const filteredFeatures = geoJsonData.features.filter(f => 
-        f.properties.kdkec === kdkec && f.properties.kddesa === kddesa
-    );
-    const sortedSls = sortAndUnique(filteredFeatures, 'kdsls', 'nmsls');
-
-    sortedSls.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.code; // Gunakan Kode SLS
-        option.textContent = `[${item.code}] - ${item.name}`;
-        // Simpan nama SLS di attribute agar mudah diambil nanti
-        option.setAttribute('data-name', item.name); 
-        selectSls.appendChild(option);
+    const kddesa = this.value; const kdkec = selectKecamatan.value;
+    resetDropdown(selectSls, 'SLS'); resetDropdown(selectSubSls, 'Sub SLS');
+    if (!kddesa) { applyMainFilter(); return; }
+    const filtered = geoJsonData.features.filter(f => f.properties.kdkec === kdkec && f.properties.kddesa === kddesa);
+    const sorted = sortAndUnique(filtered, 'kdsls', 'nmsls');
+    sorted.forEach(item => {
+        const opt = document.createElement('option'); opt.value = item.code; opt.textContent = `[${item.code}] - ${item.name}`; opt.setAttribute('data-name', item.name); selectSls.appendChild(opt);
     });
     selectSls.disabled = false;
-
     applyMainFilter();
 });
 
-// Event SLS
 selectSls.addEventListener('change', function() {
-    const kdsls = this.value;
+    const kdsls = this.value; 
     const nmsls = this.options[this.selectedIndex].getAttribute('data-name');
-    const kdkec = selectKecamatan.value;
-    const kddesa = selectDesa.value;
-
+    const kdkec = selectKecamatan.value; const kddesa = selectDesa.value;
     resetDropdown(selectSubSls, 'Sub SLS');
+    
+    if (!kdsls) { resetLayerStyles(); return; }
 
-    if (!kdsls) {
-        resetLayerStyles();
-        return;
-    }
-
-    // 1. Cari Sub SLS yang tersedia untuk SLS ini
-    const slsFeatures = geoJsonData.features.filter(f => 
-        f.properties.kdkec === kdkec && 
-        f.properties.kddesa === kddesa &&
-        f.properties.kdsls === kdsls
-    );
-
-    // Cek apakah punya sub (lebih dari 1 geometri atau punya properti subsls yang valid)
-    // Filter SubSLS memuat atribut 'subsls' (misal: 01, 02)
-    // Jika hanya ada 1 feature dan subsls kosong/00, maka disable
-    const hasSub = slsFeatures.length > 1;
-
-    if (hasSub) {
-        // Populate SubSLS Dropdown
-        // Urutkan berdasarkan subsls
-        const sortedSubs = slsFeatures
-            .map(f => f.properties.subsls)
-            .sort()
-            .filter((v, i, a) => a.indexOf(v) === i); // Unique
-
+    const slsFeatures = geoJsonData.features.filter(f => f.properties.kdkec === kdkec && f.properties.kddesa === kddesa && f.properties.kdsls === kdsls);
+    if (slsFeatures.length > 1) {
+        const sortedSubs = slsFeatures.map(f => f.properties.subsls).sort().filter((v, i, a) => a.indexOf(v) === i);
         sortedSubs.forEach(subCode => {
-            const option = document.createElement('option');
-            option.value = subCode;
-            option.textContent = `Sub: ${subCode}`;
-            selectSubSls.appendChild(option);
+            const opt = document.createElement('option'); opt.value = subCode; opt.textContent = `Sub: ${subCode}`; selectSubSls.appendChild(opt);
         });
         selectSubSls.disabled = false;
     }
-
-    // Trigger Highlight SLS Group
     highlightSlsGroup(kdsls, nmsls);
 });
 
-// Event Sub SLS
 selectSubSls.addEventListener('change', function() {
     const subCode = this.value;
     const kdsls = selectSls.value;
     const nmsls = selectSls.options[selectSls.selectedIndex].getAttribute('data-name');
-
-    if(!subCode) {
-        // Jika kembali ke "Semua Sub", trigger group view lagi
-        highlightSlsGroup(kdsls, nmsls);
-        return;
-    }
-
-    // Cari feature spesifik
-    const targetLayer = geoJsonLayer.getLayers().find(layer => {
-        const p = layer.feature.properties;
-        return p.kdsls === kdsls && p.nmsls === nmsls && p.subsls === subCode;
+    if(!subCode) { highlightSlsGroup(kdsls, nmsls); return; }
+    const target = geoJsonLayer.getLayers().find(l => {
+        const p = l.feature.properties; return p.kdsls === kdsls && p.nmsls === nmsls && p.subsls === subCode;
     });
-
-    if (targetLayer) {
-        highlightSubSlsSpecific(targetLayer);
-    }
+    if (target) highlightSubSlsSpecific(target);
 });
 
+function resetDropdown(el, txt) { el.innerHTML = `<option value="">Semua ${txt}</option>`; el.disabled = true; }
 
-// Helper Reset Dropdown
-function resetDropdown(element, defaultText) {
-    element.innerHTML = `<option value="">Semua ${defaultText}</option>`;
-    element.disabled = true;
-}
-
-// Fungsi Main Filter (Hanya untuk render ulang data dasar jika diperlukan)
 function applyMainFilter() {
-    const kdkec = selectKecamatan.value;
-    const kddesa = selectDesa.value;
-
-    // Kita filter data hanya sampai level Desa agar SLS lain tetap ada di memori untuk ditampilkan (hanya di-dimkan)
-    const filteredFeatures = geoJsonData.features.filter(f => {
-        const p = f.properties;
-        return (!kdkec || p.kdkec === kdkec) &&
-               (!kddesa || p.kddesa === kddesa);
+    const kdkec = selectKecamatan.value; const kddesa = selectDesa.value;
+    const filtered = geoJsonData.features.filter(f => {
+        const p = f.properties; return (!kdkec || p.kdkec === kdkec) && (!kddesa || p.kddesa === kddesa);
     });
-
-    renderMap({ type: "FeatureCollection", features: filteredFeatures });
+    renderMap({ type: "FeatureCollection", features: filtered });
 }
 
-// Reset Button
 document.getElementById('btn-reset').addEventListener('click', () => {
-    selectKecamatan.value = "";
-    resetDropdown(selectDesa, 'Desa');
-    resetDropdown(selectSls, 'SLS');
-    resetDropdown(selectSubSls, 'Sub SLS');
-    
-    // Render ulang semua
-    renderMap(geoJsonData);
-    resetLayerStyles();
+    selectKecamatan.value = ""; resetDropdown(selectDesa, 'Desa'); resetDropdown(selectSls, 'SLS'); resetDropdown(selectSubSls, 'Sub SLS');
+    renderMap(geoJsonData); resetLayerStyles();
 });
 
-// Search Location & Point in Polygon (Sama seperti sebelumnya)
 document.getElementById('btn-search').addEventListener('click', () => {
     const lat = parseFloat(document.getElementById('input-lat').value);
     const lng = parseFloat(document.getElementById('input-lng').value);
-
     if (isNaN(lat) || isNaN(lng)) { alert("Koordinat tidak valid"); return; }
-
-    const foundFeature = findSlsByLocation(lat, lng, geoJsonData);
-    let popupContent = "";
-
+    const found = findSlsByLocation(lat, lng, geoJsonData);
     if (searchMarker) map.removeLayer(searchMarker);
-
-    if (foundFeature) {
-        const p = foundFeature.properties;
-        const subTxt = p.subsls ? `(Sub: ${p.subsls})` : '';
-        popupContent = `
-            <div style="color: #231f20; font-family: 'Roboto', sans-serif; text-align: center;">
-                <h4 style="margin: 0 0 5px 0; border-bottom: 2px solid #f79039; padding-bottom:5px; color:#f79039;">Lokasi Terdeteksi</h4>
-                Desa ${p.nmdesa}<br>
-                <b>${p.nmsls}</b> ${subTxt}
-            </div>
-        `;
-        // Auto Highlight Feature Tersebut
-        geoJsonLayer.eachLayer(layer => {
-            if (layer.feature.properties.idsls === p.idsls && layer.feature.properties.subsls === p.subsls) {
-                highlightSubSlsSpecific(layer);
-            }
+    
+    let content = `<div style="color:red; font-weight:bold;">Lokasi Luar Wilayah</div>`;
+    if (found) {
+        const p = found.properties;
+        content = `<div style="text-align:center; color:${currentColors.slsBorder}"><b>Desa ${p.nmdesa}</b><br>${p.nmsls} (Sub: ${p.subsls||'-'})</div>`;
+        geoJsonLayer.eachLayer(l => {
+            if (l.feature.properties.idsls === p.idsls && l.feature.properties.subsls === p.subsls) highlightSubSlsSpecific(l);
         });
-    } else {
-        popupContent = `<div style="color: red; font-weight:bold;">Lokasi di luar wilayah.</div>`;
     }
-
-    searchMarker = L.marker([lat, lng]).addTo(map).bindPopup(popupContent).openPopup();
+    searchMarker = L.marker([lat, lng]).addTo(map).bindPopup(content).openPopup();
     map.flyTo([lat, lng], 18);
 });
 
 function findSlsByLocation(lat, lng, data) {
-    if (!data) return null;
-    const point = [lng, lat];
-    for (const feature of data.features) {
-        const geom = feature.geometry;
-        if (!geom) continue;
-        if (geom.type === 'Polygon' && isPointInPolygon(point, geom.coordinates)) return feature;
-        if (geom.type === 'MultiPolygon') {
-            for (const poly of geom.coordinates) if (isPointInPolygon(point, poly)) return feature;
-        }
+    if (!data) return null; const pt = [lng, lat];
+    for (const f of data.features) {
+        const geom = f.geometry; if (!geom) continue;
+        if (geom.type === 'Polygon' && isPtInPoly(pt, geom.coordinates)) return f;
+        if (geom.type === 'MultiPolygon') { for (const p of geom.coordinates) if (isPtInPoly(pt, p)) return f; }
     }
     return null;
 }
-
-function isPointInPolygon(point, vs) {
-    const x = point[0], y = point[1];
-    const ring = vs[0];
-    let inside = false;
+function isPtInPoly(pt, vs) {
+    const x = pt[0], y = pt[1]; const ring = vs[0]; let inside = false;
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const xi = ring[i][0], yi = ring[i][1];
-        const xj = ring[j][0], yj = ring[j][1];
+        const xi = ring[i][0], yi = ring[i][1]; const xj = ring[j][0], yj = ring[j][1];
         const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
         if (intersect) inside = !inside;
     }
