@@ -1,7 +1,30 @@
-// 1. Inisialisasi Peta
-var map = L.map('map').setView([2.6, 98.7], 11);
+// ==========================================
+// 1. Logic Theme Toggle (Light/Dark Mode)
+// ==========================================
+const toggleBtn = document.getElementById('theme-toggle');
+const htmlEl = document.documentElement;
 
-// 2. Tambahkan Layer Satelit
+toggleBtn.addEventListener('click', () => {
+    const currentTheme = htmlEl.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    htmlEl.setAttribute('data-theme', newTheme);
+    toggleBtn.innerHTML = newTheme === 'light' ? '🌙' : '☀️';
+});
+
+// ==========================================
+// 2. Inisialisasi Peta
+// ==========================================
+var map = L.map('map', {
+    zoomControl: false // Kita pindahkan zoom control agar tidak tertutup
+}).setView([2.6, 98.7], 11);
+
+// Pindahkan Zoom Control ke Kanan Bawah
+L.control.zoom({
+    position: 'bottomright'
+}).addTo(map);
+
+// Tambahkan Layer Satelit
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
 }).addTo(map);
@@ -19,9 +42,9 @@ const countDisplay = document.getElementById('count-display');
 
 // Style Default
 const defaultStyle = {
-    color: "#ff7800", 
-    weight: 2,        
-    opacity: 1,
+    color: "#f79039", // Menggunakan warna Orange dari tema
+    weight: 1.5,        
+    opacity: 0.8,
     fillOpacity: 0.1, 
     fillColor: null   
 };
@@ -47,10 +70,13 @@ function renderMap(data) {
         onEachFeature: function(feature, layer) {
             const props = feature.properties;
             const popupContent = `
-                <b>Kecamatan:</b> ${props.nmkec}<br>
-                <b>Desa:</b> ${props.nmdesa}<br>
-                <b>SLS:</b> ${props.nmsls}<br>
-                <b>ID SLS:</b> ${props.idsls}
+                <div style="font-family: 'Roboto', sans-serif;">
+                    <h4 style="margin:0 0 5px; color:#f79039; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Wilayah</h4>
+                    <b>Kecamatan:</b> ${props.nmkec}<br>
+                    <b>Desa:</b> ${props.nmdesa}<br>
+                    <b>SLS:</b> ${props.nmsls}<br>
+                    <small style="color:#888;">ID: ${props.idsls}</small>
+                </div>
             `;
             layer.bindPopup(popupContent);
 
@@ -75,14 +101,14 @@ function renderMap(data) {
 function highlightAndZoom(targetLayer) {
     map.flyToBounds(targetLayer.getBounds(), {
         padding: [50, 50],
-        duration: 1.5
+        duration: 1.2
     });
 
     geoJsonLayer.eachLayer(function(layer) {
         if (layer === targetLayer) {
             layer.setStyle({
                 weight: 4,           
-                color: '#ff7800',    
+                color: '#febd26',  // Warna Kuning saat terpilih  
                 fillOpacity: 0       
             });
             layer.bringToFront();    
@@ -90,9 +116,9 @@ function highlightAndZoom(targetLayer) {
         } else {
             layer.setStyle({
                 weight: 1,           
-                color: '#ff7800',
-                fillColor: 'gray',   
-                fillOpacity: 0.25    
+                color: '#f79039',
+                fillColor: '#231f20', // Warna gelap
+                fillOpacity: 0.4    // Opacity background digelapkan agar fokus
             });
         }
     });
@@ -197,10 +223,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     renderMap(geoJsonData);
 });
 
-// ============================================================
-// FITUR PENCARIAN BARU (POINT IN POLYGON)
-// ============================================================
-
+// Search Location & Point in Polygon
 document.getElementById('btn-search').addEventListener('click', () => {
     const lat = parseFloat(document.getElementById('input-lat').value);
     const lng = parseFloat(document.getElementById('input-lng').value);
@@ -210,51 +233,37 @@ document.getElementById('btn-search').addEventListener('click', () => {
         return;
     }
 
-    // 1. Cari apakah titik ini masuk ke dalam salah satu SLS di database
-    // Kita cari di RAW data (geoJsonData) agar tidak terpengaruh filter yang sedang aktif
     let foundFeature = findSlsByLocation(lat, lng, geoJsonData);
-    
     let popupContent = "";
-    let popupOptions = {};
 
     if (foundFeature) {
-        // SKENARIO 1: Lokasi DITEMUKAN (Warna Biru)
         const p = foundFeature.properties;
         popupContent = `
-            <div style="color: #0056b3; font-family: sans-serif; text-align: center;">
-                <h4 style="margin: 0 0 5px 0; border-bottom: 1px solid #ccc; padding-bottom:5px;">Lokasi Terdeteksi</h4>
+            <div style="color: #231f20; font-family: 'Roboto', sans-serif; text-align: center;">
+                <h4 style="margin: 0 0 5px 0; border-bottom: 2px solid #f79039; padding-bottom:5px; color:#f79039;">Lokasi Terdeteksi</h4>
                 Titik Lokasi berada di:<br>
                 <b>Desa ${p.nmdesa}</b><br>
                 <b>${p.nmsls}</b>
             </div>
         `;
-        // Opsi tambahan jika ingin bubble popupnya berwarna khusus, 
-        // tapi styling konten HTML di atas sudah cukup mewakili permintaan.
     } else {
-        // SKENARIO 2: Lokasi TIDAK DITEMUKAN (Warna Merah)
         popupContent = `
-            <div style="color: #dc3545; font-family: sans-serif; text-align: center; font-weight: bold;">
-                <h4 style="margin: 0 0 5px 0; border-bottom: 1px solid #ccc; padding-bottom:5px;">Peringatan</h4>
+            <div style="color: #231f20; font-family: 'Roboto', sans-serif; text-align: center;">
+                <h4 style="margin: 0 0 5px 0; border-bottom: 2px solid #dc3545; padding-bottom:5px; color:#dc3545;">Peringatan</h4>
                 Titik Lokasi berada di luar peta Wilkerstat
             </div>
         `;
     }
 
-    // Hapus marker lama
     if (searchMarker) map.removeLayer(searchMarker);
 
-    // Tambah marker baru & Buka Popup
     searchMarker = L.marker([lat, lng]).addTo(map)
         .bindPopup(popupContent)
         .openPopup();
 
-    // Zoom ke lokasi
     map.setView([lat, lng], 18);
     
-    // Opsional: Jika ketemu, bisa otomatis highlight SLS-nya juga
     if (foundFeature) {
-        // Cari layer Leaflet yang sesuai dengan feature ini untuk di-highlight
-        // (Hanya jika layer tersebut sedang dirender/tidak terfilter)
         geoJsonLayer.eachLayer(layer => {
             if (layer.feature.properties.idsls === foundFeature.properties.idsls) {
                 highlightAndZoom(layer);
@@ -263,51 +272,34 @@ document.getElementById('btn-search').addEventListener('click', () => {
     }
 });
 
-/**
- * Fungsi Algoritma Point in Polygon (Ray Casting)
- * Mencari feature mana yang menampung titik (lat, lng)
- */
 function findSlsByLocation(lat, lng, data) {
     if (!data) return null;
-    const point = [lng, lat]; // GeoJSON formatnya [lng, lat]
+    const point = [lng, lat]; 
 
     for (const feature of data.features) {
         const geom = feature.geometry;
         if (!geom) continue;
 
         if (geom.type === 'Polygon') {
-            // Polygon: koordinat ada di geom.coordinates
             if (isPointInPolygon(point, geom.coordinates)) return feature;
         } 
         else if (geom.type === 'MultiPolygon') {
-            // MultiPolygon: array dari Polygon
             for (const polyCoords of geom.coordinates) {
                 if (isPointInPolygon(point, polyCoords)) return feature;
             }
         }
     }
-    return null; // Tidak ketemu
+    return null; 
 }
 
-/**
- * Fungsi Matematika Dasar Cek Titik dalam Polygon
- * Menggunakan Ray-Casting Algorithm
- */
 function isPointInPolygon(point, vs) {
-    // vs adalah array ring polygon. Ring pertama [0] adalah batas luar (exterior)
-    // Ring selanjutnya adalah lubang (holes), tapi untuk kasus ini kita cek batas luar saja cukup.
-    
     const x = point[0], y = point[1];
     const ring = vs[0]; 
-    
     let inside = false;
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
         const xi = ring[i][0], yi = ring[i][1];
         const xj = ring[j][0], yj = ring[j][1];
-        
-        const intersect = ((yi > y) !== (yj > y)) &&
-            (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
         if (intersect) inside = !inside;
     }
     return inside;
