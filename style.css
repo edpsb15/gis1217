@@ -1,5 +1,5 @@
 :root {
-    /* Palet Warna */
+    /* Palet Warna Utama */
     --color-cream: #fffbee;
     --color-dark: #231f20;
     --color-orange: #f79039;
@@ -12,232 +12,153 @@
     --border-color: #ddd;
     --input-bg: #f9f9f9;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    
+    /* Warna Garis */
+    --line-primary: var(--color-orange);
+    --line-secondary: #007bff; /* Biru untuk aksen garis putus-putus di Light Mode */
 }
 
 [data-theme="dark"] {
-    --bg-panel: rgba(35, 31, 32, 0.95); /* #231f20 dengan transparansi */
+    --bg-panel: rgba(35, 31, 32, 0.95); 
     --text-main: var(--color-cream);
     --text-muted: #aaa;
     --border-color: #444;
     --input-bg: #333;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    
+    --line-secondary: #00ffff; /* Cyan cerah untuk aksen garis putus-putus di Dark Mode */
 }
 
 body, html {
     margin: 0;
     padding: 0;
     height: 100%;
-    font-family: 'Roboto', sans-serif; /* Font ala Google Maps */
+    font-family: 'Roboto', sans-serif;
     color: var(--text-main);
-    overflow: hidden; /* Mencegah scroll pada body */
+    overflow: hidden; 
 }
 
-/* Map Fullscreen */
 #map {
     height: 100vh;
     width: 100%;
     z-index: 1;
 }
 
-/* Sidebar Floating Card Style */
+/* Sidebar & UI Components (Sama seperti sebelumnya) */
 .sidebar {
     position: absolute;
     top: 20px;
     left: 20px;
     width: 320px;
     background-color: var(--bg-panel);
-    backdrop-filter: blur(5px); /* Efek kaca */
+    backdrop-filter: blur(5px);
     padding: 25px;
-    border-radius: 16px; /* Sudut membulat modern */
+    border-radius: 16px;
     box-shadow: var(--shadow);
     z-index: 1000;
     max-height: calc(100vh - 60px);
     overflow-y: auto;
     transition: all 0.3s ease;
-    scrollbar-width: thin;
 }
 
-/* Header */
 .header-section {
     margin-bottom: 20px;
     border-bottom: 2px solid var(--color-orange);
     padding-bottom: 10px;
 }
 
-h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--color-orange);
-}
+h1 { margin: 0; font-size: 22px; font-weight: 700; color: var(--color-orange); }
+.subtitle { margin: 5px 0 0; font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
-.subtitle {
-    margin: 5px 0 0;
-    font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-/* Control Groups */
-.control-group {
-    margin-bottom: 20px;
-}
-
+.control-group { margin-bottom: 20px; }
 .group-header {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-    margin-bottom: 10px;
-    font-weight: 700;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); margin-bottom: 10px; font-weight: 700;
 }
 
-/* Input Styling Modern */
-.input-wrapper {
-    position: relative;
-    margin-bottom: 12px;
-}
-
+.input-wrapper { margin-bottom: 12px; }
 .input-wrapper label {
-    display: block;
-    font-size: 12px;
-    font-weight: 500;
-    margin-bottom: 4px;
-    color: var(--text-main);
+    display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--text-main);
 }
 
 select, input {
-    width: 100%;
-    padding: 10px 12px;
+    width: 100%; padding: 10px 12px;
     background-color: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     color: var(--text-main);
-    font-family: inherit;
-    font-size: 14px;
+    font-family: inherit; font-size: 13px; /* Font size sedikit dikecilkan agar muat */
     box-sizing: border-box;
     transition: border 0.3s, box-shadow 0.3s;
 }
 
 select:focus, input:focus {
-    outline: none;
-    border-color: var(--color-orange);
+    outline: none; border-color: var(--color-orange);
     box-shadow: 0 0 0 3px rgba(247, 144, 57, 0.2);
 }
 
-.input-row {
-    display: flex;
-    gap: 10px;
-}
+select:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.floating-label {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 10px;
-    color: var(--text-muted);
-    pointer-events: none;
-    display: none; /* Hide for now, clean look */
-}
+.input-row { display: flex; gap: 10px; }
 
-/* Buttons */
 button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 25px; /* Pill shape buttons */
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 14px;
-    transition: transform 0.2s, opacity 0.2s;
-    margin-top: 5px;
+    width: 100%; padding: 12px; border: none; border-radius: 25px;
+    cursor: pointer; font-weight: 700; font-size: 14px; margin-top: 5px;
 }
-
-button:active {
-    transform: scale(0.98);
-}
-
 .btn-primary {
     background: linear-gradient(45deg, var(--color-orange), var(--color-yellow));
     color: #fff;
     box-shadow: 0 4px 6px rgba(247, 144, 57, 0.3);
 }
-
 .btn-secondary {
-    background-color: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-muted);
-    padding: 8px;
-    font-size: 12px;
+    background-color: transparent; border: 1px solid var(--border-color);
+    color: var(--text-muted); padding: 8px; font-size: 12px;
 }
+.btn-secondary:hover { background-color: var(--input-bg); color: var(--text-main); }
 
-.btn-secondary:hover {
-    background-color: var(--input-bg);
-    color: var(--text-main);
-}
-
-/* Footer */
 .footer {
-    margin-top: 30px;
-    text-align: center;
-    font-size: 10px;
-    color: var(--text-muted);
-    border-top: 1px solid var(--border-color);
-    padding-top: 15px;
-    line-height: 1.5;
+    margin-top: 30px; text-align: center; font-size: 10px;
+    color: var(--text-muted); border-top: 1px solid var(--border-color);
+    padding-top: 15px; line-height: 1.5;
 }
 
 #info-box {
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 10px;
-    font-weight: 500;
+    text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 10px; font-weight: 500;
 }
 
-/* Toggle Theme Button */
 .floating-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 45px;
-    height: 45px;
-    background-color: var(--bg-panel);
-    color: var(--text-main);
-    border-radius: 50%;
-    box-shadow: var(--shadow);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    padding: 0;
-    margin: 0;
+    position: absolute; top: 20px; right: 20px; width: 45px; height: 45px;
+    background-color: var(--bg-panel); color: var(--text-main);
+    border-radius: 50%; box-shadow: var(--shadow);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; padding: 0; margin: 0; cursor: pointer; border: none;
 }
 
-.floating-btn:hover {
-    background-color: var(--input-bg);
-}
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
-/* Scrollbar Customization */
-::-webkit-scrollbar {
-    width: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
-}
-
-/* Popup Customization untuk Dark/Light */
+/* Popup */
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-    background: var(--bg-panel);
-    color: var(--text-main);
-    border-radius: 8px;
+    background: var(--bg-panel); color: var(--text-main); border-radius: 8px;
 }
-.leaflet-popup-content b {
-    color: var(--color-orange);
+.leaflet-popup-content b { color: var(--color-orange); }
+
+/* ==== STYLE KHUSUS SUBSLS ==== */
+
+/* Label SubSLS di tengah geometri */
+.subsls-label {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--text-main);
+    font-weight: bold;
+    font-size: 10px;
+    opacity: 0.5 !important; /* Opacity 50% sesuai request */
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.8); /* Agar terbaca di peta satelit */
+}
+[data-theme="dark"] .subsls-label {
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    color: #fff;
 }
