@@ -1,49 +1,75 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIS Peta Wilayah SLS</title>
+    <title>Geospatial System</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+    <button id="theme-toggle" class="floating-btn" title="Ganti Tema">
+        🌙
+    </button>
+
     <div class="sidebar">
-        <h2>Filter & Pencarian</h2>
+        <div class="header-section">
+            <h1>Geospatial System</h1>
+            <p class="subtitle">Analisis Batas Wilayah & Lokasi</p>
+        </div>
         
         <div class="control-group">
-            <h3>Filter Administratif</h3>
-            <label for="filter-kecamatan">Kecamatan:</label>
-            <select id="filter-kecamatan">
-                <option value="">Semua Kecamatan</option>
-            </select>
-
-            <label for="filter-desa">Desa/Kelurahan:</label>
-            <select id="filter-desa" disabled>
-                <option value="">Semua Desa</option>
-            </select>
-
-            <label for="filter-sls">SLS (Dusun/Lingkungan):</label>
-            <select id="filter-sls" disabled>
-                <option value="">Semua SLS</option>
-            </select>
+            <div class="group-header">Filter Wilayah</div>
             
-            <button id="btn-reset">Reset Filter</button>
+            <div class="input-wrapper">
+                <label>Kecamatan</label>
+                <select id="filter-kecamatan">
+                    <option value="">Semua Kecamatan</option>
+                </select>
+            </div>
+
+            <div class="input-wrapper">
+                <label>Desa/Kelurahan</label>
+                <select id="filter-desa" disabled>
+                    <option value="">Semua Desa</option>
+                </select>
+            </div>
+
+            <div class="input-wrapper">
+                <label>SLS (Dusun/Lingkungan)</label>
+                <select id="filter-sls" disabled>
+                    <option value="">Semua SLS</option>
+                </select>
+            </div>
+            
+            <button id="btn-reset" class="btn-secondary">Reset Filter</button>
         </div>
 
         <div class="control-group">
-            <h3>Cari Koordinat</h3>
+            <div class="group-header">Cari Koordinat</div>
             <div class="input-row">
-                <input type="number" id="input-lat" placeholder="Latitude (ex: 2.56)" step="any">
-                <input type="number" id="input-lng" placeholder="Longitude (ex: 98.75)" step="any">
+                <div class="input-wrapper">
+                    <input type="number" id="input-lat" placeholder="-2.56..." step="any">
+                    <span class="floating-label">Latitude</span>
+                </div>
+                <div class="input-wrapper">
+                    <input type="number" id="input-lng" placeholder="98.75..." step="any">
+                    <span class="floating-label">Longitude</span>
+                </div>
             </div>
-            <button id="btn-search">Cari Lokasi</button>
+            <button id="btn-search" class="btn-primary">Cari Lokasi</button>
         </div>
         
         <div id="info-box">
-            <p>Total Wilayah Ditampilkan: <span id="count-display">0</span></p>
+            Total Wilayah: <span id="count-display">0</span>
+        </div>
+
+        <div class="footer">
+            Powered by <b>IT Support and Innovation</b><br>
+            BPS Statistics Samosir Regency ©
         </div>
     </div>
 
