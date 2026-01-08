@@ -145,3 +145,93 @@ button {
     background: var(--bg-panel); color: var(--text-main); border-radius: 8px;
 }
 .leaflet-popup-content b { color: var(--map-sls-border); }
+
+/* ==== SIDEBAR DEFAULT (DESKTOP) ==== */
+.sidebar {
+    position: absolute; top: 20px; left: 20px; width: 320px;
+    background-color: var(--bg-panel); backdrop-filter: blur(10px);
+    padding: 25px; border-radius: 16px; box-shadow: var(--shadow);
+    z-index: 2000; /* Z-index ditingkatkan agar di atas overlay */
+    max-height: calc(100vh - 60px); overflow-y: auto;
+    
+    /* Animasi Transisi */
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s;
+}
+
+/* Tombol Floating (Theme Toggle & Hamburger) */
+.floating-btn {
+    position: absolute; width: 45px; height: 45px;
+    background-color: var(--bg-panel); color: var(--text-main);
+    border-radius: 50%; box-shadow: var(--shadow);
+    z-index: 1500; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; cursor: pointer; border: none;
+    transition: background 0.2s;
+}
+.floating-btn:active { transform: scale(0.95); }
+
+/* Posisi Tombol Theme (Kanan Atas) */
+#theme-toggle { top: 20px; right: 20px; }
+
+/* Posisi Tombol Hamburger (Default: Hidden di Desktop) */
+#mobile-menu-btn { 
+    top: 20px; left: 20px; 
+    display: none; /* Sembunyikan di PC */
+}
+
+/* Tombol Close di dalam Sidebar (Default: Hidden di Desktop) */
+.close-sidebar-btn {
+    position: absolute; top: 15px; right: 15px;
+    background: transparent; border: none; font-size: 24px;
+    color: var(--text-muted); cursor: pointer;
+    display: none; /* Sembunyikan di PC */
+}
+
+/* Overlay Gelap Background */
+#sidebar-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 1900;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+/* ==== RESPONSIVE MOBILE (Max Width 768px) ==== */
+@media screen and (max-width: 768px) {
+    
+    /* 1. Tampilkan Tombol Hamburger */
+    #mobile-menu-btn { display: flex; }
+
+    /* 2. Ubah Sidebar menjadi Off-Canvas Drawer */
+    .sidebar {
+        top: 0; left: 0;
+        width: 85%; /* Lebar 85% layar HP */
+        max-width: 320px;
+        height: 100vh; /* Full Height */
+        max-height: 100vh;
+        border-radius: 0; /* Hilangkan sudut bulat sisi kiri */
+        
+        /* Posisi Awal: Tersembunyi di kiri layar */
+        transform: translateX(-110%); 
+        opacity: 0;
+    }
+
+    /* 3. Class saat Sidebar Aktif (Muncul) */
+    .sidebar.active {
+        transform: translateX(0); /* Geser ke posisi normal */
+        opacity: 1;
+    }
+
+    /* 4. Tampilkan Tombol Close */
+    .close-sidebar-btn { display: block; }
+
+    /* 5. Overlay Aktif */
+    #sidebar-overlay.active {
+        opacity: 1; visibility: visible;
+    }
+
+    /* 6. Penyesuaian Elemen Lain */
+    .leaflet-control-zoom { display: none; } /* Sembunyikan zoom control default biar luas */
+    
+    /* Judul lebih kecil di HP */
+    h1 { font-size: 20px; }
+}
