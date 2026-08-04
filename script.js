@@ -124,11 +124,13 @@ function renderMap(data) {
                     <small style="color:#888;">ID: ${props.idsls}</small>
                 </div>
             `;
-            layer.bindPopup(popupContent);
+            // Popup dinonaktifkan, menggunakan Bottom Sheet
+            // layer.bindPopup(popupContent);
 
             layer.on('click', function(e) {
                 // Saat klik, trigger highlight spesifik
                 highlightSubSlsSpecific(layer);
+                showBottomSheet(popupContent);
                 L.DomEvent.stopPropagation(e);
             });
         }
@@ -269,7 +271,7 @@ function highlightSubSlsSpecific(targetLayer) {
                 fillOpacity: 0 // No Fill
             });
             layer.bringToFront();
-            layer.openPopup(); 
+            // layer.openPopup(); // Gunakan Bottom Sheet
             
             // Label tetap muncul di yang dipilih
             if (p.subsls) {
@@ -413,12 +415,23 @@ document.getElementById('btn-search').addEventListener('click', () => {
     let content = `<div style="color:red; font-weight:bold;">Lokasi Luar Wilayah</div>`;
     if (found) {
         const p = found.properties;
-        content = `<div style="text-align:center; color:${currentColors.slsBorder}"><b>Desa ${p.nmdesa}</b><br>${p.nmsls} (Sub: ${p.subsls||'-'})</div>`;
+        content = `
+            <div style="font-family: 'Roboto', sans-serif;">
+                <h4 style="margin:0 0 5px; color:${currentColors.slsBorder}; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Pencarian Lokasi</h4>
+                <b>Kecamatan:</b> [${p.kdkec}] ${p.nmkec}<br>
+                <b>Desa:</b> [${p.kddesa}] ${p.nmdesa}<br>
+                <b>SLS:</b> [${p.kdsls}] ${p.nmsls}<br>
+                <b>Sub SLS:</b> ${p.subsls||'-'}<br>
+                <small style="color:#888;">ID: ${p.idsls}</small>
+            </div>
+        `;
         geoJsonLayer.eachLayer(l => {
             if (l.feature.properties.idsls === p.idsls && l.feature.properties.subsls === p.subsls) highlightSubSlsSpecific(l);
         });
     }
-    searchMarker = L.marker([lat, lng]).addTo(map).bindPopup(content).openPopup();
+    
+    showBottomSheet(content);
+    searchMarker = L.marker([lat, lng]).addTo(map);
     map.flyTo([lat, lng], 18);
 });
 
@@ -508,6 +521,26 @@ function startGPS() {
                     
                     // Fly to location on first load
                     map.flyTo([lat, lng], 15, { duration: 1.5 });
+                    
+                    // Tampilkan Bottom Sheet lokasi Anda saat ini
+                    if (geoJsonData) {
+                        const foundSls = findSlsByLocation(lat, lng, geoJsonData);
+                        if (foundSls) {
+                            const p = foundSls.properties;
+                            const subInfo = p.subsls ? `<b>Sub SLS:</b> ${p.subsls}<br>` : '';
+                            const contentHTML = `
+                                <div style="font-family: 'Roboto', sans-serif;">
+                                    <p style="color:#28a745; font-weight:bold; margin-top:0; font-size:14px; margin-bottom:10px;">📍 Anda sedang berada di :</p>
+                                    <h4 style="margin:0 0 5px; color:${currentColors.slsBorder}; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Wilayah</h4>
+                                    <b>Kecamatan:</b> [${p.kdkec}] ${p.nmkec}<br>
+                                    <b>Desa:</b> [${p.kddesa}] ${p.nmdesa}<br>
+                                    <b>SLS:</b> [${p.kdsls}] ${p.nmsls}<br>
+                                    ${subInfo}
+                                </div>
+                            `;
+                            showBottomSheet(contentHTML);
+                        }
+                    }
                 } else {
                     userMarker.setLatLng([lat, lng]);
                     userCircle.setLatLng([lat, lng]);
@@ -559,4 +592,39 @@ if (gpsToggle) {
     if (gpsToggle.checked) {
         startGPS();
     }
+}
+
+// ==========================================
+// 9. BOTTOM SHEET LOGIC
+// ==========================================
+const bottomSheet = document.getElementById('bottom-sheet');
+const bottomSheetContent = document.getElementById('bottom-sheet-content');
+const closeBottomSheetBtn = document.getElementById('close-bottom-sheet');
+
+function showBottomSheet(contentHTML) {
+    if(bottomSheetContent) bottomSheetContent.innerHTML = contentHTML;
+    if(bottomSheet) bottomSheet.classList.add('active');
+}
+
+function hideBottomSheet() {
+    if(bottomSheet) bottomSheet.classList.remove('active');
+}
+
+if(closeBottomSheetBtn) {
+    closeBottomSheetBtn.addEventListener('click', hideBottomSheet);
+}
+
+// Swipe down to close bottom sheet (Mobile friendly)
+let startY = 0;
+const bottomSheetHandle = document.getElementById('bottom-sheet-handle');
+if(bottomSheetHandle) {
+    bottomSheetHandle.addEventListener('touchstart', (e) => { 
+        startY = e.touches[0].clientY; 
+    }, {passive: true});
+    bottomSheetHandle.addEventListener('touchmove', (e) => {
+        const currentY = e.touches[0].clientY;
+        if(currentY - startY > 30) {
+            hideBottomSheet();
+        }
+    }, {passive: true});
 }

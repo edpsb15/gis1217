@@ -233,6 +233,51 @@ input:checked + .slider:before {
     transform: translateX(18px);
 }
 
+/* ==== BOTTOM SHEET ==== */
+.bottom-sheet {
+    position: fixed;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 400px;
+    background-color: var(--bg-panel);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+    z-index: 3000;
+    transition: bottom 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    padding: 20px;
+    box-sizing: border-box;
+    max-height: 50vh;
+    overflow-y: auto;
+    backdrop-filter: blur(10px);
+}
+.bottom-sheet.active {
+    bottom: 0;
+}
+.bottom-sheet-handle {
+    width: 40px;
+    height: 5px;
+    background-color: var(--border-color);
+    border-radius: 5px;
+    margin: 0 auto 15px auto;
+    cursor: pointer;
+}
+.close-bottom-sheet {
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 18px !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin-top: 0 !important;
+}
+
 /* ==== RESPONSIVE MOBILE (Max Width 768px) ==== */
 @media screen and (max-width: 768px) {
     
