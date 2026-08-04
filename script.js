@@ -471,3 +471,92 @@ overlay.addEventListener('click', closeSidebar); // Klik area gelap untuk tutup
 if (window.innerWidth <= 768) {
        closeSidebar();
    }
+
+// ==========================================
+// 8. GPS / LOKASI PENGGUNA
+// ==========================================
+let watchId = null;
+let userMarker = null;
+let userCircle = null;
+const gpsToggle = document.getElementById('gps-toggle');
+
+function startGPS() {
+    if ("geolocation" in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+
+                if (!userMarker) {
+                    userMarker = L.circleMarker([lat, lng], {
+                        radius: 8,
+                        fillColor: "#007bff",
+                        color: "#ffffff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 1,
+                        zIndexOffset: 1000
+                    }).addTo(map);
+
+                    userCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: "#007bff",
+                        weight: 1,
+                        fillOpacity: 0.2
+                    }).addTo(map);
+                    
+                    // Fly to location on first load
+                    map.flyTo([lat, lng], 15, { duration: 1.5 });
+                } else {
+                    userMarker.setLatLng([lat, lng]);
+                    userCircle.setLatLng([lat, lng]);
+                    userCircle.setRadius(accuracy);
+                }
+            },
+            (error) => {
+                console.warn("GPS Error:", error);
+                if (error.code === 1) { // PERMISSION_DENIED
+                    alert("Akses lokasi ditolak. Silakan izinkan dari pengaturan browser.");
+                    if(gpsToggle) gpsToggle.checked = false;
+                }
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 10000,
+                timeout: 10000
+            }
+        );
+    } else {
+        alert("Geolokasi tidak didukung oleh browser ini.");
+        if(gpsToggle) gpsToggle.checked = false;
+    }
+}
+
+function stopGPS() {
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
+    if (userMarker) {
+        map.removeLayer(userMarker);
+        map.removeLayer(userCircle);
+        userMarker = null;
+        userCircle = null;
+    }
+}
+
+if (gpsToggle) {
+    gpsToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            startGPS();
+        } else {
+            stopGPS();
+        }
+    });
+
+    // Auto start
+    if (gpsToggle.checked) {
+        startGPS();
+    }
+}
