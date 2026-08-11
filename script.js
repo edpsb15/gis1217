@@ -12,8 +12,6 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/
 var geoJsonData = null;
 var geoJsonLayer = null;
 var searchMarker = null;
-var currentActiveProps = null;
-var currentActiveTitle = "Info Wilayah";
 
 // Mengambil nilai warna aktual dari CSS Variable
 function getThemeColor(varName) {
@@ -49,7 +47,7 @@ toggleBtn.addEventListener('click', () => {
 
     // 1. Update State Warna JS
     updateColorState();
-    
+
     // 2. Render Ulang Style Layer yang ada
     if (geoJsonLayer) {
         // Kita perlu menerapkan ulang highlight logic jika ada yang sedang terpilih
@@ -68,7 +66,7 @@ function updateLabelFontSize() {
     // Kita ingin font size:
     // Min: 10px (saat zoom out)
     // Max: 24px (saat zoom in maksimal)
-    
+
     const minFont = 10;
     const maxFont = 24;
     const minZoom = 11;
@@ -92,79 +90,6 @@ updateLabelFontSize();
 
 
 // ==========================================
-// Helper Bar & Bottom Sheet Info
-// ==========================================
-function toTitleCase(str) {
-    if (!str) return '';
-    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-}
-
-function updateTopBar(nmsls, subsls) {
-    const topBarLoc = document.getElementById('top-bar-location');
-    if (!topBarLoc) return;
-
-    if (!nmsls) {
-        topBarLoc.textContent = '"-"';
-        return;
-    }
-
-    const formattedNmsls = toTitleCase(nmsls);
-    let text = formattedNmsls;
-    if (subsls && subsls !== '-') {
-        const subStr = subsls.toString().toLowerCase().startsWith('sub') ? subsls : `sub ${subsls}`;
-        text += ` - ${subStr}`;
-    }
-    topBarLoc.textContent = `"${text}"`;
-}
-
-function renderSlsBottomSheet(props, badgeTitle = 'Info Wilayah') {
-    if (!props) return;
-    currentActiveProps = props;
-    currentActiveTitle = badgeTitle;
-
-    const nmslsFormatted = props.nmsls ? toTitleCase(props.nmsls) : '-';
-    const subslsVal = props.subsls ? (props.subsls.toString().toLowerCase().startsWith('sub') ? props.subsls : `Sub ${props.subsls}`) : '-';
-    const nmkecVal = props.nmkec ? toTitleCase(props.nmkec) : '-';
-    const nmdesaVal = props.nmdesa ? toTitleCase(props.nmdesa) : '-';
-
-    const contentHTML = `
-        <div class="bs-container">
-            <div class="bs-header-row">
-                <span class="bs-badge">${badgeTitle}</span>
-                <h3 class="bs-title">${nmslsFormatted}</h3>
-            </div>
-            
-            <div class="bs-grid">
-                <div class="bs-card-item">
-                    <div class="bs-item-label">Kecamatan</div>
-                    <div class="bs-item-val">[${props.kdkec || '-'}] ${nmkecVal}</div>
-                </div>
-                <div class="bs-card-item">
-                    <div class="bs-item-label">Desa / Kelurahan</div>
-                    <div class="bs-item-val">[${props.kddesa || '-'}] ${nmdesaVal}</div>
-                </div>
-                <div class="bs-card-item">
-                    <div class="bs-item-label">SLS (Dusun/Lingkungan)</div>
-                    <div class="bs-item-val">[${props.kdsls || '-'}] ${nmslsFormatted}</div>
-                </div>
-                <div class="bs-card-item">
-                    <div class="bs-item-label">Sub SLS</div>
-                    <div class="bs-item-val">${subslsVal}</div>
-                </div>
-            </div>
-
-            <div class="bs-meta-footer">
-                <span class="bs-pill">ID SLS: ${props.idsls || '-'}</span>
-                ${props.luas ? `<span class="bs-pill">Luas: ${parseFloat(props.luas).toFixed(2)} ha</span>` : ''}
-            </div>
-        </div>
-    `;
-    
-    showBottomSheet(contentHTML);
-    updateTopBar(props.nmsls, props.subsls);
-}
-
-// ==========================================
 // 3. Load Data & Render
 // ==========================================
 fetch('peta_sls_2025.geojson')
@@ -173,10 +98,6 @@ fetch('peta_sls_2025.geojson')
         geoJsonData = data;
         populateFiltersKecamatan(data);
         renderMap(data);
-        if (userMarker) {
-            const latLng = userMarker.getLatLng();
-            updateLocationFromGps(latLng.lat, latLng.lng);
-        }
     })
     .catch(error => console.error('Error loading GeoJSON:', error));
 
@@ -189,13 +110,27 @@ function renderMap(data) {
 
     geoJsonLayer = L.geoJSON(data, {
         style: getDefaultStyle, // Menggunakan fungsi agar dinamis
-        onEachFeature: function(feature, layer) {
+        onEachFeature: function (feature, layer) {
             const props = feature.properties;
-            
-            layer.on('click', function(e) {
+            const subInfo = props.subsls ? `<b>Sub SLS:</b> ${props.subsls}<br>` : '';
+
+            const popupContent = `
+                <div style="font-family: 'Roboto', sans-serif;">
+                    <h4 style="margin:0 0 5px; color:${currentColors.slsBorder}; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Wilayah</h4>
+                    <b>Kecamatan:</b> [${props.kdkec}] ${props.nmkec}<br>
+                    <b>Desa:</b> [${props.kddesa}] ${props.nmdesa}<br>
+                    <b>SLS:</b> [${props.kdsls}] ${props.nmsls}<br>
+                    ${subInfo}
+                    <small style="color:#888;">ID: ${props.idsls}</small>
+                </div>
+            `;
+            // Popup dinonaktifkan, menggunakan Bottom Sheet
+            // layer.bindPopup(popupContent);
+
+            layer.on('click', function (e) {
                 // Saat klik, trigger highlight spesifik
                 highlightSubSlsSpecific(layer);
-                renderSlsBottomSheet(props, "Wilayah Terpilih");
+                showBottomSheet(popupContent);
                 L.DomEvent.stopPropagation(e);
             });
         }
@@ -211,14 +146,14 @@ function renderMap(data) {
 function getDefaultStyle() {
     return {
         // b. Batas SLS Tidak Terpilih
-        color: currentColors.slsBorder, 
+        color: currentColors.slsBorder,
         weight: 1.5,
         opacity: 1,
-        
+
         // a. Fill Geometri SLS Tidak Terpilih (Opacity 50%)
         fillColor: currentColors.slsFillNonSel,
         fillOpacity: 0.5,
-        
+
         dashArray: null
     };
 }
@@ -231,22 +166,22 @@ function getDefaultStyle() {
 function resetLayerStyles() {
     // Refresh warna variable jaga-jaga user ganti tema saat ada seleksi
     updateColorState();
-    
+
     geoJsonLayer.eachLayer(layer => {
         geoJsonLayer.resetStyle(layer); // Kembali ke getDefaultStyle
-        layer.unbindTooltip(); 
+        layer.unbindTooltip();
     });
     map.fitBounds(geoJsonLayer.getBounds());
 }
 
 // A. Highlight SLS GROUP (Induk)
-function highlightSlsGroup(slsCode, slsName) {
+function highlightSlsGroup(kdkec, kddesa, slsCode, slsName) {
     updateColorState();
 
     const relatedLayers = [];
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
-        if (p.kdsls === slsCode && p.nmsls === slsName) {
+        if (p.kdkec === kdkec && p.kddesa === kddesa && p.kdsls === slsCode && p.nmsls === slsName) {
             relatedLayers.push(layer);
         }
     });
@@ -260,7 +195,7 @@ function highlightSlsGroup(slsCode, slsName) {
 
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
-        const isTarget = (p.kdsls === slsCode && p.nmsls === slsName);
+        const isTarget = (p.kdkec === kdkec && p.kddesa === kddesa && p.kdsls === slsCode && p.nmsls === slsName);
 
         if (isTarget) {
             if (hasMultipleSubs) {
@@ -270,7 +205,7 @@ function highlightSlsGroup(slsCode, slsName) {
                     weight: 2,
                     color: currentColors.subSlsAccent, // SubSLS Border Color
                     dashArray: '5, 5', // Dashed
-                    
+
                     // f. Fill SubSLS Sibling/Tidak Terpilih (Opacity 25%)
                     fillColor: currentColors.subSlsAccent,
                     fillOpacity: 0.25
@@ -302,7 +237,7 @@ function highlightSlsGroup(slsCode, slsName) {
             // Untuk mematuhi request "Batas SLS Tidak Terpilih", kita pakai resetStyle saja untuk non-target
             // Tapi agar fokus, biasanya yang lain dibuat redup. 
             // Sesuai request: "Fill geometri sls tidak terpilih ... opacity 50%" (sudah default)
-            
+
             // Kita biarkan default style (via resetStyle nanti) atau set manual:
             layer.setStyle({
                 weight: 1,
@@ -314,19 +249,13 @@ function highlightSlsGroup(slsCode, slsName) {
             layer.unbindTooltip();
         }
     });
-}
-
-// B. Highlight SubSLS Specific (Saat diklik atau dipilih dari Sub Filter)
+}// B. Highlight SubSLS Specific (Saat diklik atau dipilih dari Sub Filter)
 function highlightSubSlsSpecific(targetLayer) {
     updateColorState();
-    const props = targetLayer.feature.properties;
     
     map.flyToBounds(targetLayer.getBounds(), { padding: [50, 50], duration: 1 });
     
     geoJsonLayer.eachLayer(layer => {
-        const p = layer.feature.properties;
-        const isSibling = (p.kdsls === props.kdsls && p.nmsls === props.nmsls);
-        
         if (layer === targetLayer) {
             // === d. Batas SUBSLS Terpilih ===
             layer.setStyle({
@@ -336,32 +265,14 @@ function highlightSubSlsSpecific(targetLayer) {
                 fillOpacity: 0 // No Fill
             });
             layer.bringToFront();
-            // layer.openPopup(); // Gunakan Bottom Sheet
             
-            // Label tetap muncul di yang dipilih
+            // Label hanya muncul di yang dipilih
+            const p = layer.feature.properties;
             if (p.subsls) {
                 layer.bindTooltip(p.subsls, {
                     permanent: true, direction: 'center', className: 'subsls-label'
                 }).openTooltip();
             }
-
-        } else if (isSibling) {
-            // === e & f. SubSLS Tetangga (Satu SLS Induk) ===
-            layer.setStyle({
-                weight: 2,
-                color: currentColors.subSlsAccent, // Dashed Color
-                dashArray: '5, 5',
-                fillColor: currentColors.subSlsAccent, // Fill Color Sama
-                fillOpacity: 0.25 // Opacity 25%
-            });
-            
-            // Label juga muncul di tetangga agar terlihat konteksnya
-            if (p.subsls) {
-                layer.bindTooltip(p.subsls, {
-                    permanent: true, direction: 'center', className: 'subsls-label'
-                }).openTooltip();
-            }
-
         } else {
             // Wilayah Lain -> Default Style
             layer.setStyle(getDefaultStyle());
@@ -370,7 +281,7 @@ function highlightSubSlsSpecific(targetLayer) {
     });
 }
 
-// ==========================================
+// =================================================
 // 5. DOM Elements & Filters (Tidak Berubah Banyak)
 // ==========================================
 const selectKecamatan = document.getElementById('filter-kecamatan');
@@ -394,12 +305,12 @@ function populateFiltersKecamatan(data) {
     sortedKec.forEach(item => {
         const option = document.createElement('option');
         option.value = item.code;
-        option.textContent = `[${item.code}] - ${item.name}`; 
+        option.textContent = `[${item.code}] - ${item.name}`;
         selectKecamatan.appendChild(option);
     });
 }
 
-selectKecamatan.addEventListener('change', function() {
+selectKecamatan.addEventListener('change', function () {
     const kdkec = this.value;
     resetDropdown(selectDesa, 'Desa'); resetDropdown(selectSls, 'SLS'); resetDropdown(selectSubSls, 'Sub SLS');
     if (!kdkec) { applyMainFilter(); return; }
@@ -412,7 +323,7 @@ selectKecamatan.addEventListener('change', function() {
     applyMainFilter();
 });
 
-selectDesa.addEventListener('change', function() {
+selectDesa.addEventListener('change', function () {
     const kddesa = this.value; const kdkec = selectKecamatan.value;
     resetDropdown(selectSls, 'SLS'); resetDropdown(selectSubSls, 'Sub SLS');
     if (!kddesa) { applyMainFilter(); return; }
@@ -425,19 +336,13 @@ selectDesa.addEventListener('change', function() {
     applyMainFilter();
 });
 
-selectSls.addEventListener('change', function() {
-    const kdsls = this.value; 
+selectSls.addEventListener('change', function () {
+    const kdsls = this.value;
     const nmsls = this.options[this.selectedIndex].getAttribute('data-name');
     const kdkec = selectKecamatan.value; const kddesa = selectDesa.value;
     resetDropdown(selectSubSls, 'Sub SLS');
-    
-    if (!kdsls) { 
-        resetLayerStyles(); 
-        currentActiveProps = null;
-        updateTopBar(null);
-        hideBottomSheet();
-        return; 
-    }
+
+    if (!kdsls) { resetLayerStyles(); return; }
 
     const slsFeatures = geoJsonData.features.filter(f => f.properties.kdkec === kdkec && f.properties.kddesa === kddesa && f.properties.kdsls === kdsls);
     if (slsFeatures.length > 1) {
@@ -447,24 +352,27 @@ selectSls.addEventListener('change', function() {
         });
         selectSubSls.disabled = false;
     }
-    highlightSlsGroup(kdsls, nmsls);
+    highlightSlsGroup(kdkec, kddesa, kdsls, nmsls);
     if (slsFeatures.length > 0) {
         renderSlsBottomSheet(slsFeatures[0].properties, "Filter Wilayah");
     }
 });
 
-selectSubSls.addEventListener('change', function() {
+selectSubSls.addEventListener('change', function () {
     const subCode = this.value;
     const kdsls = selectSls.value;
     const nmsls = selectSls.options[selectSls.selectedIndex].getAttribute('data-name');
-    if(!subCode) { 
-        highlightSlsGroup(kdsls, nmsls); 
-        const parentFeature = geoJsonData.features.find(f => f.properties.kdsls === kdsls && f.properties.nmsls === nmsls);
+    const kdkec = selectKecamatan.value;
+    const kddesa = selectDesa.value;
+    
+    if (!subCode) { 
+        highlightSlsGroup(kdkec, kddesa, kdsls, nmsls); 
+        const parentFeature = geoJsonData.features.find(f => f.properties.kdkec === kdkec && f.properties.kddesa === kddesa && f.properties.kdsls === kdsls && f.properties.nmsls === nmsls);
         if (parentFeature) renderSlsBottomSheet(parentFeature.properties, "Filter Wilayah");
         return; 
     }
     const target = geoJsonLayer.getLayers().find(l => {
-        const p = l.feature.properties; return p.kdsls === kdsls && p.nmsls === nmsls && p.subsls === subCode;
+        const p = l.feature.properties; return p.kdkec === kdkec && p.kddesa === kddesa && p.kdsls === kdsls && p.nmsls === nmsls && p.subsls === subCode;
     });
     if (target) {
         highlightSubSlsSpecific(target);
@@ -485,14 +393,6 @@ function applyMainFilter() {
 document.getElementById('btn-reset').addEventListener('click', () => {
     selectKecamatan.value = ""; resetDropdown(selectDesa, 'Desa'); resetDropdown(selectSls, 'SLS'); resetDropdown(selectSubSls, 'Sub SLS');
     renderMap(geoJsonData); resetLayerStyles();
-    currentActiveProps = null;
-    hideBottomSheet();
-    if (userMarker && geoJsonData) {
-        const latLng = userMarker.getLatLng();
-        updateLocationFromGps(latLng.lat, latLng.lng);
-    } else {
-        updateTopBar(null);
-    }
 });
 
 document.getElementById('btn-search').addEventListener('click', () => {
@@ -501,26 +401,26 @@ document.getElementById('btn-search').addEventListener('click', () => {
     if (isNaN(lat) || isNaN(lng)) { alert("Koordinat tidak valid"); return; }
     const found = findSlsByLocation(lat, lng, geoJsonData);
     if (searchMarker) map.removeLayer(searchMarker);
-    
+
+    let content = `<div style="color:red; font-weight:bold;">Lokasi Luar Wilayah</div>`;
     if (found) {
         const p = found.properties;
+        content = `
+            <div style="font-family: 'Roboto', sans-serif;">
+                <h4 style="margin:0 0 5px; color:${currentColors.slsBorder}; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Pencarian Lokasi</h4>
+                <b>Kecamatan:</b> [${p.kdkec}] ${p.nmkec}<br>
+                <b>Desa:</b> [${p.kddesa}] ${p.nmdesa}<br>
+                <b>SLS:</b> [${p.kdsls}] ${p.nmsls}<br>
+                <b>Sub SLS:</b> ${p.subsls || '-'}<br>
+                <small style="color:#888;">ID: ${p.idsls}</small>
+            </div>
+        `;
         geoJsonLayer.eachLayer(l => {
             if (l.feature.properties.idsls === p.idsls && l.feature.properties.subsls === p.subsls) highlightSubSlsSpecific(l);
         });
-        renderSlsBottomSheet(p, "Hasil Pencarian");
-    } else {
-        updateTopBar(null);
-        showBottomSheet(`
-            <div class="bs-container">
-                <div class="bs-header-row">
-                    <span class="bs-badge" style="background:#e74c3c;">Luar Wilayah</span>
-                    <h3 class="bs-title">Lokasi Tidak Ditemukan</h3>
-                </div>
-                <p style="color:var(--text-muted); font-size:13px; margin:10px 0;">Koordinat (${lat}, ${lng}) berada di luar cakupan peta SLS Wilkerstat 2025.</p>
-            </div>
-        `);
     }
-    
+
+    showBottomSheet(content);
     searchMarker = L.marker([lat, lng]).addTo(map);
     map.flyTo([lat, lng], 18);
 });
@@ -572,8 +472,8 @@ overlay.addEventListener('click', closeSidebar); // Klik area gelap untuk tutup
 // Opsional: Tutup sidebar otomatis setelah hasil pencarian ditemukan (di Mobile)
 // Tambahkan baris ini di dalam logika search Anda jika diinginkan:
 if (window.innerWidth <= 768) {
-       closeSidebar();
-   }
+    closeSidebar();
+}
 
 // ==========================================
 // 8. GPS / LOKASI PENGGUNA
@@ -582,26 +482,6 @@ let watchId = null;
 let userMarker = null;
 let userCircle = null;
 const gpsToggle = document.getElementById('gps-toggle');
-
-function updateLocationFromGps(lat, lng) {
-    if (!geoJsonData) return;
-    const foundSls = findSlsByLocation(lat, lng, geoJsonData);
-    if (foundSls) {
-        renderSlsBottomSheet(foundSls.properties, "Lokasi Saya (GPS)");
-    } else {
-        const topBarLoc = document.getElementById('top-bar-location');
-        if (topBarLoc) topBarLoc.textContent = '"Luar Wilayah Map"';
-        showBottomSheet(`
-            <div class="bs-container">
-                <div class="bs-header-row">
-                    <span class="bs-badge" style="background:#e74c3c;">GPS Lokasi</span>
-                    <h3 class="bs-title">Luar Wilayah SLS</h3>
-                </div>
-                <p style="color:var(--text-muted); font-size:13px; margin:10px 0;">Posisi GPS Anda saat ini berada di luar cakupan peta SLS Wilkerstat 2025.</p>
-            </div>
-        `);
-    }
-}
 
 function startGPS() {
     if ("geolocation" in navigator) {
@@ -628,27 +508,40 @@ function startGPS() {
                         weight: 1,
                         fillOpacity: 0.2
                     }).addTo(map);
-                    
+
                     // Fly to location on first load
                     map.flyTo([lat, lng], 15, { duration: 1.5 });
-                    
-                    // Tampilkan Info SLS Lokasi Anda saat ini
-                    updateLocationFromGps(lat, lng);
+
+                    // Tampilkan Bottom Sheet lokasi Anda saat ini
+                    if (geoJsonData) {
+                        const foundSls = findSlsByLocation(lat, lng, geoJsonData);
+                        if (foundSls) {
+                            const p = foundSls.properties;
+                            const subInfo = p.subsls ? `<b>Sub SLS:</b> ${p.subsls}<br>` : '';
+                            const contentHTML = `
+                                <div style="font-family: 'Roboto', sans-serif;">
+                                    <p style="color:#28a745; font-weight:bold; margin-top:0; font-size:14px; margin-bottom:10px;">📍 Anda sedang berada di :</p>
+                                    <h4 style="margin:0 0 5px; color:${currentColors.slsBorder}; border-bottom:1px solid #ddd; padding-bottom:5px;">Info Wilayah</h4>
+                                    <b>Kecamatan:</b> [${p.kdkec}] ${p.nmkec}<br>
+                                    <b>Desa:</b> [${p.kddesa}] ${p.nmdesa}<br>
+                                    <b>SLS:</b> [${p.kdsls}] ${p.nmsls}<br>
+                                    ${subInfo}
+                                </div>
+                            `;
+                            showBottomSheet(contentHTML);
+                        }
+                    }
                 } else {
                     userMarker.setLatLng([lat, lng]);
                     userCircle.setLatLng([lat, lng]);
                     userCircle.setRadius(accuracy);
-                    
-                    if (geoJsonData && !currentActiveProps) {
-                        updateLocationFromGps(lat, lng);
-                    }
                 }
             },
             (error) => {
                 console.warn("GPS Error:", error);
                 if (error.code === 1) { // PERMISSION_DENIED
                     alert("Akses lokasi ditolak. Silakan izinkan dari pengaturan browser.");
-                    if(gpsToggle) gpsToggle.checked = false;
+                    if (gpsToggle) gpsToggle.checked = false;
                 }
             },
             {
@@ -659,7 +552,7 @@ function startGPS() {
         );
     } else {
         alert("Geolokasi tidak didukung oleh browser ini.");
-        if(gpsToggle) gpsToggle.checked = false;
+        if (gpsToggle) gpsToggle.checked = false;
     }
 }
 
@@ -697,43 +590,31 @@ if (gpsToggle) {
 const bottomSheet = document.getElementById('bottom-sheet');
 const bottomSheetContent = document.getElementById('bottom-sheet-content');
 const closeBottomSheetBtn = document.getElementById('close-bottom-sheet');
-const topFloatingBar = document.getElementById('top-floating-bar');
 
 function showBottomSheet(contentHTML) {
-    if(bottomSheetContent) bottomSheetContent.innerHTML = contentHTML;
-    if(bottomSheet) bottomSheet.classList.add('active');
+    if (bottomSheetContent) bottomSheetContent.innerHTML = contentHTML;
+    if (bottomSheet) bottomSheet.classList.add('active');
 }
 
 function hideBottomSheet() {
-    if(bottomSheet) bottomSheet.classList.remove('active');
+    if (bottomSheet) bottomSheet.classList.remove('active');
 }
 
-if(closeBottomSheetBtn) {
+if (closeBottomSheetBtn) {
     closeBottomSheetBtn.addEventListener('click', hideBottomSheet);
-}
-
-if(topFloatingBar) {
-    topFloatingBar.addEventListener('click', () => {
-        if (currentActiveProps) {
-            renderSlsBottomSheet(currentActiveProps, currentActiveTitle);
-        } else if (userMarker && geoJsonData) {
-            const latLng = userMarker.getLatLng();
-            updateLocationFromGps(latLng.lat, latLng.lng);
-        }
-    });
 }
 
 // Swipe down to close bottom sheet (Mobile friendly)
 let startY = 0;
 const bottomSheetHandle = document.getElementById('bottom-sheet-handle');
-if(bottomSheetHandle) {
-    bottomSheetHandle.addEventListener('touchstart', (e) => { 
-        startY = e.touches[0].clientY; 
-    }, {passive: true});
+if (bottomSheetHandle) {
+    bottomSheetHandle.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+    }, { passive: true });
     bottomSheetHandle.addEventListener('touchmove', (e) => {
         const currentY = e.touches[0].clientY;
-        if(currentY - startY > 30) {
+        if (currentY - startY > 30) {
             hideBottomSheet();
         }
-    }, {passive: true});
+    }, { passive: true });
 }

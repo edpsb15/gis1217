@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="id" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Geospatial System</title>
-    
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <button id="mobile-menu-btn" class="floating-btn" title="Menu">
@@ -19,12 +21,6 @@
         🌙
     </button>
 
-    <div id="top-floating-bar" class="top-floating-bar" title="Lihat Info Wilayah">
-        <span class="top-bar-icon">📍</span>
-        <span class="top-bar-label">Anda berada di :</span>
-        <span id="top-bar-location" class="top-bar-value">"-"</span>
-    </div>
-
     <div id="sidebar-overlay"></div>
 
     <div class="sidebar" id="sidebar">
@@ -34,10 +30,10 @@
             <h1>Geospatial System - 1217</h1>
             <p class="subtitle">based on Wilkerstat 2025</p>
         </div>
-        
+
         <div class="control-group">
             <div class="group-header">Filter Wilayah</div>
-            
+
             <div class="input-wrapper">
                 <label>Kecamatan</label>
                 <select id="filter-kecamatan">
@@ -65,7 +61,7 @@
                     <option value="">-</option>
                 </select>
             </div>
-            
+
             <button id="btn-reset" class="btn-secondary">Reset Filter</button>
         </div>
 
@@ -92,7 +88,7 @@
             </div>
             <button id="btn-search" class="btn-primary">Cari Lokasi</button>
         </div>
-        
+
         <div id="info-box">
             Total Wilayah: <span id="count-display">0</span>
         </div>
@@ -114,4 +110,5 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="script.js"></script>
 </body>
+
 </html>
