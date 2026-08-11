@@ -92,7 +92,7 @@ updateLabelFontSize();
 // ==========================================
 // 3. Load Data & Render
 // ==========================================
-fetch('peta_sls_2025.geojson')
+fetch('./peta_sls_2025.geojson')
     .then(response => response.json())
     .then(data => {
         geoJsonData = data;

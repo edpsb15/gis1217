@@ -8,7 +8,7 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.1">
 </head>
 
 <body>
@@ -20,6 +20,12 @@
     <button id="theme-toggle" class="floating-btn" title="Ganti Tema">
         🌙
     </button>
+
+    <div id="top-floating-bar" class="top-floating-bar" title="Lihat Info Wilayah">
+        <span class="top-bar-icon">📍</span>
+        <span class="top-bar-label">Anda berada di :</span>
+        <span id="top-bar-location" class="top-bar-value">"-"</span>
+    </div>
 
     <div id="sidebar-overlay"></div>
 
@@ -108,7 +114,7 @@
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=1.1"></script>
 </body>
 
 </html>
