@@ -233,11 +233,198 @@ input:checked + .slider:before {
     transform: translateX(18px);
 }
 
+/* ==== TOP FLOATING BAR ==== */
+.top-floating-bar {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bg-panel);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 30px;
+    padding: 10px 22px;
+    box-shadow: var(--shadow);
+    z-index: 1400;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    max-width: 80%;
+}
+.top-floating-bar:hover {
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+.top-bar-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+.top-bar-label {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.top-bar-value {
+    font-weight: 700;
+    color: var(--map-sls-border);
+}
+
+/* ==== BOTTOM SHEET ==== */
+.bottom-sheet {
+    position: fixed;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 440px;
+    background-color: var(--bg-panel);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+    z-index: 3000;
+    transition: bottom 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    padding: 20px 24px;
+    box-sizing: border-box;
+    max-height: 60vh;
+    overflow-y: auto;
+    backdrop-filter: blur(12px);
+}
+.bottom-sheet.active {
+    bottom: 0;
+}
+.bottom-sheet-handle {
+    width: 40px;
+    height: 5px;
+    background-color: var(--border-color);
+    border-radius: 5px;
+    margin: 0 auto 15px auto;
+    cursor: pointer;
+}
+.close-bottom-sheet {
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 18px !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin-top: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* ==== BOTTOM SHEET CARD & CONTENT STYLES ==== */
+.bs-container {
+    font-family: 'Roboto', sans-serif;
+}
+.bs-header-row {
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+.bs-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--map-sls-border);
+    color: #fff;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.bs-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.bs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.bs-card-item {
+    background: var(--input-bg);
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+.bs-card-item.full-width {
+    grid-column: span 2;
+}
+.bs-item-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.bs-item-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    word-break: break-word;
+}
+.bs-meta-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+}
+.bs-pill {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+[data-theme="dark"] .bs-pill {
+    background: rgba(255, 255, 255, 0.08);
+}
+
 /* ==== RESPONSIVE MOBILE (Max Width 768px) ==== */
 @media screen and (max-width: 768px) {
     
     /* 1. Tampilkan Tombol Hamburger */
     #mobile-menu-btn { display: flex; }
+
+    /* Top Floating Bar di Mobile */
+    .top-floating-bar {
+        top: 20px;
+        left: 75px;
+        right: 75px;
+        transform: none;
+        max-width: none;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+    .top-floating-bar:hover {
+        transform: translateY(-2px);
+    }
+    .top-bar-label {
+        font-size: 11px;
+    }
+    .top-bar-value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 130px;
+    }
 
     /* 2. Ubah Sidebar menjadi Off-Canvas Drawer */
     .sidebar {
@@ -272,4 +459,13 @@ input:checked + .slider:before {
     
     /* Judul lebih kecil di HP */
     h1 { font-size: 20px; }
+    .header-section { padding-right: 35px; } /* Mencegah overlap dengan tombol silang */
+
+    .bs-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .bs-card-item.full-width {
+        grid-column: span 1;
+    }
 }
