@@ -15,6 +15,12 @@ var searchMarker = null;
 var currentActiveProps = null;
 var currentActiveTitle = "Info Wilayah";
 
+// Helper: ambil tinggi bottom sheet agar peta tidak tertutup
+function getBottomSheetHeight() {
+    const bs = document.getElementById('bottom-sheet');
+    return (bs && bs.classList.contains('active')) ? bs.offsetHeight : 0;
+}
+
 // Mengambil nilai warna aktual dari CSS Variable
 function getThemeColor(varName) {
     return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
@@ -256,8 +262,9 @@ function highlightSlsGroup(slsCode, slsName, targetIdSls, kdkec, kddesa) {
 
     if (relatedLayers.length === 0) return;
 
+    const bsOffset = getBottomSheetHeight ? getBottomSheetHeight() : 0;
     const groupFeatureGroup = L.featureGroup(relatedLayers);
-    map.flyToBounds(groupFeatureGroup.getBounds(), { padding: [50, 50], duration: 1.2 });
+    map.flyToBounds(groupFeatureGroup.getBounds(), { paddingTopLeft: [50, 50], paddingBottomRight: [50, 50 + bsOffset], duration: 1.2 });
 
     const hasMultipleSubs = relatedLayers.length > 1;
 
@@ -326,7 +333,8 @@ function highlightSubSlsSpecific(targetLayer) {
     updateColorState();
     const props = targetLayer.feature.properties;
     
-    map.flyToBounds(targetLayer.getBounds(), { padding: [50, 50], duration: 1 });
+    const bsOffset = getBottomSheetHeight ? getBottomSheetHeight() : 0;
+    map.flyToBounds(targetLayer.getBounds(), { paddingTopLeft: [50, 50], paddingBottomRight: [50, 50 + bsOffset], duration: 1 });
     
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
@@ -516,6 +524,9 @@ document.getElementById('btn-search').addEventListener('click', () => {
     const found = findSlsByLocation(lat, lng, geoJsonData);
     if (searchMarker) map.removeLayer(searchMarker);
     
+    // Tutup sidebar agar bisa lihat peta
+    closeSidebar();
+
     if (found) {
         const p = found.properties;
         geoJsonLayer.eachLayer(l => {
@@ -530,13 +541,14 @@ document.getElementById('btn-search').addEventListener('click', () => {
                     <span class="bs-badge" style="background:#e74c3c;">Luar Wilayah</span>
                     <h3 class="bs-title">Lokasi Tidak Ditemukan</h3>
                 </div>
-                <p style="color:var(--text-muted); font-size:13px; margin:10px 0;">Koordinat (${lat}, ${lng}) berada di luar cakupan peta SLS Wilkerstat 2025.</p>
+                <p style="color:var(--text-muted); font-size:12px; margin:8px 0;">Koordinat (${lat}, ${lng}) berada di luar cakupan peta SLS Wilkerstat 2025.</p>
             </div>
         `);
     }
     
     searchMarker = L.marker([lat, lng]).addTo(map);
-    map.flyTo([lat, lng], 18);
+    // Fly dengan offset bottom agar tidak tertutup bottom sheet
+    map.flyTo([lat, lng], 18, { paddingBottomRight: [0, getBottomSheetHeight()] });
 });
 
 function findSlsByLocation(lat, lng, data) {
@@ -572,14 +584,18 @@ function openSidebar() {
     overlay.classList.add('active');
 }
 
-// Fungsi Tutup Sidebar
+// Fungsi Tutup Sidebar — juga tutup bottom sheet
 function closeSidebar() {
     sidebar.classList.remove('active');
     overlay.classList.remove('active');
 }
 
 // Event Listeners
-mobileMenuBtn.addEventListener('click', openSidebar);
+mobileMenuBtn.addEventListener('click', () => {
+    // Jika bottom sheet terbuka, tutup dulu saat hamburger diklik
+    hideBottomSheet();
+    openSidebar();
+});
 closeSidebarBtn.addEventListener('click', closeSidebar);
 overlay.addEventListener('click', closeSidebar); // Klik area gelap untuk tutup
 
@@ -713,13 +729,18 @@ const bottomSheetContent = document.getElementById('bottom-sheet-content');
 const closeBottomSheetBtn = document.getElementById('close-bottom-sheet');
 const topFloatingBar = document.getElementById('top-floating-bar');
 
+
+
 function showBottomSheet(contentHTML) {
     if(bottomSheetContent) bottomSheetContent.innerHTML = contentHTML;
     if(bottomSheet) bottomSheet.classList.add('active');
+    // Beri waktu CSS transition, lalu sesuaikan padding peta
+    setTimeout(() => map.invalidateSize(), 420);
 }
 
 function hideBottomSheet() {
     if(bottomSheet) bottomSheet.classList.remove('active');
+    setTimeout(() => map.invalidateSize(), 420);
 }
 
 if(closeBottomSheetBtn) {
@@ -737,17 +758,72 @@ if(topFloatingBar) {
     });
 }
 
-// Swipe down to close bottom sheet (Mobile friendly)
-let startY = 0;
+// ==========================================
+// DRAG / SWIPE BOTTOM SHEET (Mobile)
+// ==========================================
 const bottomSheetHandle = document.getElementById('bottom-sheet-handle');
+let bsDragStartY = 0;
+let bsDragCurrentY = 0;
+let bsIsDragging = false;
+let bsOriginalBottom = 0;
+
+function onDragStart(clientY) {
+    bsDragStartY = clientY;
+    bsDragCurrentY = clientY;
+    bsIsDragging = true;
+    bsOriginalBottom = 0;
+    if(bottomSheet) {
+        bottomSheet.style.transition = 'none';
+    }
+}
+
+function onDragMove(clientY) {
+    if (!bsIsDragging || !bottomSheet) return;
+    bsDragCurrentY = clientY;
+    const diff = bsDragCurrentY - bsDragStartY;
+    if (diff > 0) {
+        // Geser ke bawah (dismiss)
+        bottomSheet.style.bottom = `-${diff}px`;
+    }
+}
+
+function onDragEnd() {
+    if (!bsIsDragging || !bottomSheet) return;
+    bsIsDragging = false;
+    bottomSheet.style.transition = '';
+    const diff = bsDragCurrentY - bsDragStartY;
+    if (diff > 60) {
+        // Swipe cukup jauh → tutup
+        hideBottomSheet();
+    } else {
+        // Kembalikan ke posisi semula
+        bottomSheet.style.bottom = '0';
+    }
+}
+
 if(bottomSheetHandle) {
-    bottomSheetHandle.addEventListener('touchstart', (e) => { 
-        startY = e.touches[0].clientY; 
-    }, {passive: true});
+    // Touch events
+    bottomSheetHandle.addEventListener('touchstart', (e) => {
+        onDragStart(e.touches[0].clientY);
+    }, { passive: true });
     bottomSheetHandle.addEventListener('touchmove', (e) => {
-        const currentY = e.touches[0].clientY;
-        if(currentY - startY > 30) {
-            hideBottomSheet();
-        }
-    }, {passive: true});
+        onDragMove(e.touches[0].clientY);
+    }, { passive: true });
+    bottomSheetHandle.addEventListener('touchend', () => {
+        onDragEnd();
+    }, { passive: true });
+
+    // Mouse events (untuk testing di desktop)
+    bottomSheetHandle.addEventListener('mousedown', (e) => {
+        onDragStart(e.clientY);
+        document.addEventListener('mousemove', onMouseDragMove);
+        document.addEventListener('mouseup', onMouseDragEnd);
+    });
+}
+
+function onMouseDragMove(e) { onDragMove(e.clientY); }
+function onMouseDragEnd() {
+    onDragEnd();
+    document.removeEventListener('mousemove', onMouseDragMove);
+    document.removeEventListener('mouseup', onMouseDragEnd);
 }
