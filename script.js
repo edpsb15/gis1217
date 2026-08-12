@@ -240,13 +240,16 @@ function resetLayerStyles() {
 }
 
 // A. Highlight SLS GROUP (Induk)
-function highlightSlsGroup(slsCode, slsName) {
+function highlightSlsGroup(slsCode, slsName, targetIdSls, kdkec, kddesa) {
     updateColorState();
 
     const relatedLayers = [];
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
-        if (p.kdsls === slsCode && p.nmsls === slsName) {
+        const isMatch = targetIdSls 
+            ? p.idsls === targetIdSls 
+            : ((!kdkec || p.kdkec === kdkec) && (!kddesa || p.kddesa === kddesa) && p.kdsls === slsCode && p.nmsls === slsName);
+        if (isMatch) {
             relatedLayers.push(layer);
         }
     });
@@ -260,7 +263,9 @@ function highlightSlsGroup(slsCode, slsName) {
 
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
-        const isTarget = (p.kdsls === slsCode && p.nmsls === slsName);
+        const isTarget = targetIdSls 
+            ? p.idsls === targetIdSls 
+            : ((!kdkec || p.kdkec === kdkec) && (!kddesa || p.kddesa === kddesa) && p.kdsls === slsCode && p.nmsls === slsName);
 
         if (isTarget) {
             if (hasMultipleSubs) {
@@ -325,7 +330,9 @@ function highlightSubSlsSpecific(targetLayer) {
     
     geoJsonLayer.eachLayer(layer => {
         const p = layer.feature.properties;
-        const isSibling = (p.kdsls === props.kdsls && p.nmsls === props.nmsls);
+        const isSibling = (props.idsls && p.idsls)
+            ? (p.idsls === props.idsls)
+            : (p.kdkec === props.kdkec && p.kddesa === props.kddesa && p.kdsls === props.kdsls);
         
         if (layer === targetLayer) {
             // === d. Batas SUBSLS Terpilih ===
@@ -447,7 +454,8 @@ selectSls.addEventListener('change', function() {
         });
         selectSubSls.disabled = false;
     }
-    highlightSlsGroup(kdsls, nmsls);
+    const targetIdSls = slsFeatures.length > 0 ? slsFeatures[0].properties.idsls : null;
+    highlightSlsGroup(kdsls, nmsls, targetIdSls, kdkec, kddesa);
     if (slsFeatures.length > 0) {
         renderSlsBottomSheet(slsFeatures[0].properties, "Filter Wilayah");
     }
@@ -457,14 +465,20 @@ selectSubSls.addEventListener('change', function() {
     const subCode = this.value;
     const kdsls = selectSls.value;
     const nmsls = selectSls.options[selectSls.selectedIndex].getAttribute('data-name');
+    const kdkec = selectKecamatan.value; const kddesa = selectDesa.value;
+
+    const slsFeatures = geoJsonData.features.filter(f => f.properties.kdkec === kdkec && f.properties.kddesa === kddesa && f.properties.kdsls === kdsls);
+    const targetIdSls = slsFeatures.length > 0 ? slsFeatures[0].properties.idsls : null;
+
     if(!subCode) { 
-        highlightSlsGroup(kdsls, nmsls); 
-        const parentFeature = geoJsonData.features.find(f => f.properties.kdsls === kdsls && f.properties.nmsls === nmsls);
+        highlightSlsGroup(kdsls, nmsls, targetIdSls, kdkec, kddesa); 
+        const parentFeature = slsFeatures[0];
         if (parentFeature) renderSlsBottomSheet(parentFeature.properties, "Filter Wilayah");
         return; 
     }
     const target = geoJsonLayer.getLayers().find(l => {
-        const p = l.feature.properties; return p.kdsls === kdsls && p.nmsls === nmsls && p.subsls === subCode;
+        const p = l.feature.properties; 
+        return (targetIdSls ? p.idsls === targetIdSls : (p.kdkec === kdkec && p.kddesa === kddesa && p.kdsls === kdsls)) && p.subsls === subCode;
     });
     if (target) {
         highlightSubSlsSpecific(target);
